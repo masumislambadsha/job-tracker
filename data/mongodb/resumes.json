@@ -1,0 +1,51 @@
+[
+  {
+    "_id": { "$oid": "66c5a0020000000000000001" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "label": "Next.js Developer Resume",
+    "url": "/resumes/nextjs_developer.pdf",
+    "createdAt": { "$date": "2026-08-21T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "66c5a0020000000000000002" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "label": "React Developer Resume",
+    "url": "/resumes/react_developer.pdf",
+    "createdAt": { "$date": "2026-08-21T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "66c5a0020000000000000003" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "label": "Frontend Developer Resume",
+    "url": "/resumes/frontend_developer.pdf",
+    "createdAt": { "$date": "2026-08-21T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "66c5a0020000000000000004" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "label": "Full-Stack Developer Resume",
+    "url": "/resumes/full_stack_developer.pdf",
+    "createdAt": { "$date": "2026-08-21T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "66c5a0020000000000000005" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "label": "MERN Developer Resume",
+    "url": "/resumes/mern_developer.pdf",
+    "createdAt": { "$date": "2026-08-21T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "66c5a0020000000000000006" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "label": "Software Developer Resume",
+    "url": "/resumes/software_developer.pdf",
+    "createdAt": { "$date": "2026-08-21T00:00:00.000Z" }
+  },
+  {
+    "_id": { "$oid": "66c5a0020000000000000007" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "label": "Web Developer Resume",
+    "url": "/resumes/web_developer.pdf",
+    "createdAt": { "$date": "2026-08-21T00:00:00.000Z" }
+  }
+]

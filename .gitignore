@@ -1,0 +1,7 @@
+node_modules
+.next
+.env
+.env.local
+mcp-server/.token
+.vercel
+.env*

@@ -1,0 +1,194 @@
+[
+  {
+    "_id": { "$oid": "66c5a0010000000000000001" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "React Jobs",
+    "url": "https://reactjobs.io/",
+    "tier": 1,
+    "notes": "Specialized in React, Next.js, and frontend remote engineering roles."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000002" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Hacker News 'Who is Hiring'",
+    "url": "https://news.ycombinator.com/submitted?id=whoishiring",
+    "tier": 1,
+    "notes": "Monthly thread posted on the 1st of every month. Direct engineering team contacts."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000003" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Working Nomads",
+    "url": "https://www.workingnomads.com/",
+    "tier": 1,
+    "notes": "Curated 100% remote software engineering jobs across global timezones."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000004" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Dynamite Jobs",
+    "url": "https://dynamitejobs.com/",
+    "tier": 1,
+    "notes": "Verified remote-first company postings with clear compensation ranges."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000005" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "VueJobs",
+    "url": "https://vuejobs.com/",
+    "tier": 1,
+    "notes": "Dedicated Vue / Nuxt / Full-stack positions and remote roles."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000006" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Jobspresso",
+    "url": "https://jobspresso.co/",
+    "tier": 2,
+    "notes": "Expertly curated remote tech careers in startups and established tech firms."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000007" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "JustRemote",
+    "url": "https://justremote.co/",
+    "tier": 2,
+    "notes": "Search hidden remote jobs and full-stack developer opportunities globally."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000008" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "NoDesk",
+    "url": "https://nodesk.co/",
+    "tier": 2,
+    "notes": "Digital nomad & international remote developer listings and resources."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000009" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Gun.io",
+    "url": "https://gun.io/",
+    "tier": 2,
+    "notes": "Vetted freelance & full-time developer placements with top tier clients."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000010" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Underdog.io",
+    "url": "https://underdog.io/",
+    "tier": 2,
+    "notes": "Direct candidate batch matching with high-growth US & European tech startups."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000011" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Jobgether",
+    "url": "https://jobgether.com/",
+    "tier": 2,
+    "notes": "Aggregator for flexible and telecommuting dev jobs across Europe & Asia."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000012" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Landing.jobs",
+    "url": "https://landing.jobs/",
+    "tier": 2,
+    "notes": "European tech jobs hub with strong remote-friendly and relocation openings."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000013" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "EU Remote Jobs",
+    "url": "https://euremotejobs.com/",
+    "tier": 2,
+    "notes": "Timezone-friendly remote developer jobs within EU/UK and nearby zones."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000014" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "RemoteYeah",
+    "url": "https://remoteyeah.com/",
+    "tier": 2,
+    "notes": "Curated software engineering vacancies without timezone discrimination."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000015" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Remote Rocketship",
+    "url": "https://www.remoterocketship.com/",
+    "tier": 2,
+    "notes": "Automated engine scraping remote postings directly from company career sites."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000016" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "DailyRemote",
+    "url": "https://dailyremote.com/",
+    "tier": 3,
+    "notes": "Daily feed of software developer, QA, and DevOps remote openings."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000017" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Braintrust",
+    "url": "https://www.usebraintrust.com/",
+    "tier": 3,
+    "notes": "Decentralized talent network connecting elite tech contractors with enterprise."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000018" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Virtual Vocations",
+    "url": "https://www.virtualvocations.com/",
+    "tier": 3,
+    "notes": "Hand-screened telecommute job database with tech category filtering."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000019" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "SkipTheDrive",
+    "url": "https://www.skipthedrive.com/",
+    "tier": 3,
+    "notes": "Free remote work directory with software development listings."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000020" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Authentic Jobs",
+    "url": "https://authenticjobs.com/",
+    "tier": 3,
+    "notes": "Design and full-stack engineering job board for web professionals."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000021" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Larajobs",
+    "url": "https://larajobs.com/",
+    "tier": 3,
+    "notes": "Official Laravel and full-stack PHP / modern web ecosystem jobs."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000022" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Rails Job Board",
+    "url": "https://jobs.rubyonrails.org/",
+    "tier": 3,
+    "notes": "Official Ruby on Rails community board with remote-first teams."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000023" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "Django Job Board",
+    "url": "https://www.djangoproject.com/community/jobs/",
+    "tier": 3,
+    "notes": "Official Django Software Foundation remote Python / Django listings."
+  },
+  {
+    "_id": { "$oid": "66c5a0010000000000000024" },
+    "userId": { "$oid": "66c5a0000000000000000001" },
+    "name": "WordPress Jobs",
+    "url": "https://jobs.wordpress.net/",
+    "tier": 3,
+    "notes": "Core WordPress, headless CMS, and plugin engineering opportunities."
+  }
+]

@@ -367,13 +367,12 @@ export default function ApplicationDetailPage() {
                     </Select>
                     {application.resumeVersion?.url && (
                       <a
-                        href={application.resumeVersion.url}
-                        target="_blank"
-                        rel="noreferrer"
+                        href={`/api/resumes/${application.resumeVersion.id}/download`}
+                        download
                         className="text-[11px] text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1"
                       >
                         <FileText className="h-3 w-3" />
-                        <span>Open Resume Link</span>
+                        <span>Download Linked Resume</span>
                         <ExternalLink className="h-2.5 w-2.5" />
                       </a>
                     )}

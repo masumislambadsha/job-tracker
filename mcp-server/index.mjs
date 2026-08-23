@@ -15,6 +15,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { PrismaClient } from "@prisma/client";
+import { readFile } from "fs/promises";
+import path from "path";
 import { z } from "zod";
 
 // ─── Prisma ──────────────────────────────────────────────────────────────────
@@ -272,7 +274,7 @@ server.tool("list_portals", "List all curated job portals in your JobDesk direct
 // ──────────────────────────────────────────────────────────────────────────────
 // TOOL: list_resumes
 // ──────────────────────────────────────────────────────────────────────────────
-server.tool("list_resumes", "List all resume versions with their callback rates.", {}, async () => {
+server.tool("list_resumes", "List all resume versions with their callback rates. Use download_resume to fetch the actual PDF file.", {}, async () => {
   const userId = await getDefaultUserId();
   const resumes = await prisma.resumeVersion.findMany({
     where: { userId },
@@ -286,10 +288,58 @@ server.tool("list_resumes", "List all resume versions with their callback rates.
         id: r.id,
         label: r.label,
         url: r.url,
+        source: r.url.startsWith("/resumes/") ? "local_pdf" : "external_url",
         created: r.createdAt,
       })), null, 2),
     }],
   };
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TOOL: download_resume
+// ──────────────────────────────────────────────────────────────────────────────
+server.tool("download_resume", "Download a resume PDF by ID. Local uploads are returned as a base64 PDF embedded resource; external (e.g. Google Drive) resumes return their direct URL.", {
+  id: z.string().describe("Resume version ID from list_resumes"),
+}, async ({ id }) => {
+  const resume = await prisma.resumeVersion.findUnique({ where: { id } });
+  if (!resume) return { content: [{ type: "text", text: `❌ Resume not found: ${id}` }] };
+
+  if (!resume.url.startsWith("/resumes/")) {
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({ label: resume.label, source: "external_url", url: resume.url, note: "External resume — fetch this URL directly." }, null, 2),
+      }],
+    };
+  }
+
+  const safeName = path.basename(resume.url);
+  if (!/^[a-z0-9_.-]+\.pdf$/i.test(safeName)) {
+    return { content: [{ type: "text", text: "❌ Invalid resume file reference." }] };
+  }
+
+  const filePath = path.join(process.cwd(), "public", "resumes", safeName);
+  try {
+    const buffer = await readFile(filePath);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `📄 ${resume.label} — application/pdf (${(buffer.length / 1024).toFixed(1)} KB). PDF attached as base64 in the embedded resource.`,
+        },
+        {
+          type: "resource",
+          resource: {
+            uri: `file://${filePath}`,
+            mimeType: "application/pdf",
+            blob: buffer.toString("base64"),
+          },
+        },
+      ],
+    };
+  } catch {
+    return { content: [{ type: "text", text: `❌ Resume file missing on disk: ${safeName}` }] };
+  }
 });
 
 // ──────────────────────────────────────────────────────────────────────────────

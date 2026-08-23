@@ -11,7 +11,7 @@ import { formatDate } from "@/lib/utils";
 import {
   FileText,
   Plus,
-  ExternalLink,
+  Download,
   Edit2,
   Trash2,
   Award,
@@ -193,15 +193,17 @@ export default function ResumesPage() {
                 {resume.url.startsWith("/resumes/") ? "PDF File" : "Google Drive"}
               </span>
 
-              <a
-                href={resume.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-300 hover:text-zinc-100"
-              >
-                <span>View PDF</span>
-                <ExternalLink className="h-3 w-3" />
-              </a>
+              <div className="flex items-center gap-2.5">
+                <a
+                  href={`/api/resumes/${resume.id}/download`}
+                  download
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-300 hover:text-zinc-100"
+                  title={resume.url.startsWith("/resumes/") ? "Download PDF" : "Open source link"}
+                >
+                  <span>Download</span>
+                  <Download className="h-3 w-3" />
+                </a>
+              </div>
             </div>
           </Card>
         ))}

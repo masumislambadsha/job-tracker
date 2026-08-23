@@ -17,13 +17,16 @@ interface WeeklyTrendChartProps {
   data: DashboardSummary["weeklyTrend"];
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
+    const point = payload[0].payload;
     return (
       <div className="rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 shadow-md">
-        <p className="text-[11px] text-zinc-400 font-mono">Week: {label}</p>
+        <p className="text-[11px] text-zinc-400 font-mono">
+          Week: {point.range ?? point.week}
+        </p>
         <p className="text-xs font-semibold text-zinc-100 mt-0.5">
-          {payload[0].value} {payload[0].value === 1 ? "application" : "applications"}
+          {point.count} {point.count === 1 ? "application" : "applications"}
         </p>
       </div>
     );

@@ -113,6 +113,7 @@ export interface DashboardSummary {
   };
   weeklyTrend: {
     week: string;
+    range?: string;
     count: number;
   }[];
   portalLeaderboard: {

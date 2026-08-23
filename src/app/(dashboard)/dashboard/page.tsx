@@ -86,7 +86,7 @@ async function getDashboardData(userId: string): Promise<DashboardSummary> {
     (a, b) => new Date(a.followUpDate).getTime() - new Date(b.followUpDate).getTime()
   );
 
-  const weeklyTrend: { week: string; count: number }[] = [];
+  const weeklyTrend: { week: string; range?: string; count: number }[] = [];
   for (let i = 7; i >= 0; i--) {
     const targetDate = subWeeks(now, i);
     const weekStart = startOfWeek(targetDate, { weekStartsOn: 5 });
@@ -98,7 +98,11 @@ async function getDashboardData(userId: string): Promise<DashboardSummary> {
       return isWithinInterval(d, { start: weekStart, end: weekEnd });
     }).length;
 
-    weeklyTrend.push({ week: weekLabel, count });
+    weeklyTrend.push({
+      week: i === 0 ? `${weekLabel}+` : weekLabel,
+      range: `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d")}`,
+      count,
+    });
   }
 
   let totalResponseDays = 0;

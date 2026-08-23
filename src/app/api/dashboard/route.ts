@@ -90,7 +90,7 @@ export async function GET() {
     );
 
     // 4. Weekly Application Trend (Last 8 weeks)
-    const weeklyTrend: { week: string; count: number }[] = [];
+    const weeklyTrend: { week: string; range?: string; count: number }[] = [];
     for (let i = 7; i >= 0; i--) {
       const targetDate = subWeeks(now, i);
       const weekStart = startOfWeek(targetDate, { weekStartsOn: 5 });
@@ -102,7 +102,11 @@ export async function GET() {
         return isWithinInterval(d, { start: weekStart, end: weekEnd });
       }).length;
 
-      weeklyTrend.push({ week: weekLabel, count });
+      weeklyTrend.push({
+        week: i === 0 ? `${weekLabel}+` : weekLabel,
+        range: `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d")}`,
+        count,
+      });
     }
 
     // 5. Average Days to First Response

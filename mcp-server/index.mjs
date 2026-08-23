@@ -298,7 +298,7 @@ server.tool("list_resumes", "List all resume versions with their callback rates.
 // ──────────────────────────────────────────────────────────────────────────────
 // TOOL: download_resume
 // ──────────────────────────────────────────────────────────────────────────────
-server.tool("download_resume", "Download a resume PDF by ID. Local uploads are returned as a base64 PDF embedded resource; external (e.g. Google Drive) resumes return their direct URL.", {
+server.tool("download_resume", "Download a resume PDF by ID. Returns metadata plus the full PDF as a base64-encoded string (decode it to get application/pdf bytes). Also includes the absolute file path (local) and download endpoint.", {
   id: z.string().describe("Resume version ID from list_resumes"),
 }, async ({ id }) => {
   const resume = await prisma.resumeVersion.findUnique({ where: { id } });
@@ -308,7 +308,7 @@ server.tool("download_resume", "Download a resume PDF by ID. Local uploads are r
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({ label: resume.label, source: "external_url", url: resume.url, note: "External resume — fetch this URL directly." }, null, 2),
+        text: JSON.stringify({ label: resume.label, source: "external_url", url: resume.url, note: "External resume (e.g. Google Drive) — fetch this URL directly." }, null, 2),
       }],
     };
   }
@@ -322,20 +322,19 @@ server.tool("download_resume", "Download a resume PDF by ID. Local uploads are r
   try {
     const buffer = await readFile(filePath);
     return {
-      content: [
-        {
-          type: "text",
-          text: `📄 ${resume.label} — application/pdf (${(buffer.length / 1024).toFixed(1)} KB). PDF attached as base64 in the embedded resource.`,
-        },
-        {
-          type: "resource",
-          resource: {
-            uri: `file://${filePath}`,
-            mimeType: "application/pdf",
-            blob: buffer.toString("base64"),
-          },
-        },
-      ],
+      content: [{
+        type: "text",
+        text: JSON.stringify({
+          label: resume.label,
+          mime_type: "application/pdf",
+          size_bytes: buffer.length,
+          file_path: filePath,
+          download_endpoint: `/api/resumes/${id}/download`,
+          encoding: "base64",
+          data_base64: buffer.toString("base64"),
+          note: "Decode data_base64 from base64 to binary and save with a .pdf extension. If you have filesystem access, you can also read file_path directly.",
+        }, null, 2),
+      }],
     };
   } catch {
     return { content: [{ type: "text", text: `❌ Resume file missing on disk: ${safeName}` }] };

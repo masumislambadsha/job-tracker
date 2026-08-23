@@ -40,7 +40,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
         <div>
           <CardTitle>Application Volume</CardTitle>
           <CardDescription>
-            Weekly application cadence over the last 8 weeks
+            Weekly (Fri–Thu) application cadence over the last 8 weeks
           </CardDescription>
         </div>
         <span className="text-xs font-mono text-zinc-400">

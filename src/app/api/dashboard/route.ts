@@ -93,8 +93,8 @@ export async function GET() {
     const weeklyTrend: { week: string; count: number }[] = [];
     for (let i = 7; i >= 0; i--) {
       const targetDate = subWeeks(now, i);
-      const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
+      const weekStart = startOfWeek(targetDate, { weekStartsOn: 5 });
+      const weekEnd = endOfWeek(targetDate, { weekStartsOn: 5 });
       const weekLabel = format(weekStart, "MMM d");
 
       const count = applications.filter((a) => {

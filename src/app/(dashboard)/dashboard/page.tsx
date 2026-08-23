@@ -7,6 +7,7 @@ import { WeeklyTrendChart } from "@/components/dashboard/WeeklyTrendChart";
 import { FollowUpAlerts } from "@/components/dashboard/FollowUpAlerts";
 import { PortalLeaderboard } from "@/components/dashboard/PortalLeaderboard";
 import { calculatePercentage } from "@/lib/utils";
+import { RESPONSE_STATUSES } from "@/lib/constants";
 import { subWeeks, startOfWeek, endOfWeek, isWithinInterval, format } from "date-fns";
 import { DashboardSummary } from "@/lib/types";
 
@@ -39,10 +40,8 @@ async function getDashboardData(userId: string): Promise<DashboardSummary> {
   const appliedApps = applications.filter((a) => a.status !== "WISHLIST");
   const appliedCount = appliedApps.length;
 
-  const responseApps = applications.filter(
-    (a) =>
-      !["WISHLIST", "APPLIED", "GHOSTED"].includes(a.status) ||
-      (a.statusHistory && a.statusHistory.length > 1)
+  const responseApps = applications.filter((a) =>
+    RESPONSE_STATUSES.includes(a.status)
   );
   const responseCount = responseApps.length;
 

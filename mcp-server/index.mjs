@@ -50,7 +50,7 @@ server.tool("get_dashboard_stats", "Get live KPI metrics: total applications, ac
   const offers = apps.filter(a => a.status === "OFFER").length;
 
   const applied = apps.filter(a => a.status !== "WISHLIST").length;
-  const responses = apps.filter(a => !["WISHLIST","APPLIED","GHOSTED"].includes(a.status) || (a.statusHistory && a.statusHistory.length > 1)).length;
+  const responses = apps.filter(a => ["OA_ASSESSMENT","INTERVIEW_SCHEDULED","INTERVIEW_COMPLETED","OFFER","REJECTED"].includes(a.status)).length;
   const responseRate = applied > 0 ? Math.round((responses / applied) * 100) : 0;
 
   const now = new Date();

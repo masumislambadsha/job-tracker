@@ -1,5 +1,13 @@
 import { ApplicationStatus, JobNature, JobType } from "./types";
 
+export const RESPONSE_STATUSES: string[] = [
+  "OA_ASSESSMENT",
+  "INTERVIEW_SCHEDULED",
+  "INTERVIEW_COMPLETED",
+  "OFFER",
+  "REJECTED",
+];
+
 export const STATUS_PIPELINE: {
   id: ApplicationStatus;
   label: string;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
 import { calculatePercentage, isDateOverdue } from "@/lib/utils";
+import { RESPONSE_STATUSES } from "@/lib/constants";
 import { format, subWeeks, startOfWeek, endOfWeek, parseISO, isWithinInterval } from "date-fns";
 
 export async function GET() {
@@ -38,10 +39,8 @@ export async function GET() {
     const appliedApps = applications.filter((a) => a.status !== "WISHLIST");
     const appliedCount = appliedApps.length;
 
-    const responseApps = applications.filter(
-      (a) =>
-        !["WISHLIST", "APPLIED", "GHOSTED"].includes(a.status) ||
-        (a.statusHistory && a.statusHistory.length > 1)
+    const responseApps = applications.filter((a) =>
+      RESPONSE_STATUSES.includes(a.status)
     );
     const responseCount = responseApps.length;
 

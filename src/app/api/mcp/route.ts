@@ -6,7 +6,8 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
-import { isMcpAuthorized, mcpCorsHeaders } from "@/lib/mcp-token";
+import { isMcpAuthorized, mcpCorsHeaders, getMcpToken } from "@/lib/mcp-token";
+import { isOAuthAccessToken } from "@/lib/oauth";
 
 // ─── Helper: get user ID ──────────────────────────────────────────────────────
 async function getUserId(request: NextRequest): Promise<string> {
@@ -282,8 +283,21 @@ function createMcpServer() {
 }
 
 // ─── Next.js route handler ────────────────────────────────────────────────────
+async function isAuthorized(request: NextRequest): Promise<boolean> {
+  const header = request.headers.get("authorization");
+  if (header) {
+    const match = /^Bearer\s+(.+)$/i.exec(header.trim());
+    if (match) {
+      const bearer = match[1];
+      if (bearer === getMcpToken()) return true;
+      if (await isOAuthAccessToken(bearer)) return true;
+    }
+  }
+  return isMcpAuthorized(request);
+}
+
 async function handleMcpRequest(request: NextRequest): Promise<NextResponse> {
-  if (!isMcpAuthorized(request)) {
+  if (!(await isAuthorized(request))) {
     return NextResponse.json(
       { error: "Unauthorized. Pass ?token=<MCP_TOKEN> or Authorization: Bearer <MCP_TOKEN>" },
       { status: 401, headers: mcpCorsHeaders() },

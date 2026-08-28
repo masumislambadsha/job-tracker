@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
+import { appendApplication } from "@/lib/google-sheets";
 
 export async function GET(request: Request) {
   try {
@@ -212,12 +213,15 @@ export async function POST(request: Request) {
       },
     });
 
-    // Fire-and-forget Google Sheets sync
-    import("@/lib/google-sheets").then(({ appendApplication }) => {
-      appendApplication(populated).catch((err) =>
-        console.error("[Sheets Sync] Background error:", err.message)
-      );
-    });
+    // Sync to Google Sheets. This is awaited (not fire-and-forget) because
+    // Vercel serverless functions freeze after the response is returned, which
+    // would otherwise leave the sheet sync unfinished. Failures are caught and
+    // logged so they never fail the application creation itself.
+    try {
+      await appendApplication(populated);
+    } catch (err) {
+      console.error("[Sheets Sync] Background error:", (err as Error).message);
+    }
 
     return NextResponse.json(populated, { status: 201 });
   } catch (error) {

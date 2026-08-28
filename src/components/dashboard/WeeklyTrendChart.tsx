@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/Card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import {
   AreaChart,
   Area,
@@ -21,11 +21,11 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const point = payload[0].payload;
     return (
-      <div className="rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 shadow-md">
-        <p className="text-[11px] text-zinc-400 font-mono">
+      <div className="rounded-md border bg-popover px-2.5 py-1.5 shadow-md text-popover-foreground">
+        <p className="text-[11px] text-muted-foreground font-mono">
           Week: {point.range ?? point.week}
         </p>
-        <p className="text-xs font-semibold text-zinc-100 mt-0.5">
+        <p className="text-xs font-semibold mt-0.5">
           {point.count} {point.count === 1 ? "application" : "applications"}
         </p>
       </div>
@@ -38,15 +38,15 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
   const totalInPeriod = data.reduce((acc, curr) => acc + curr.count, 0);
 
   return (
-    <Card className="h-full bg-zinc-900/50 border-zinc-800">
+    <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div>
-          <CardTitle>Application Volume</CardTitle>
+          <CardTitle className="text-base">Application Volume</CardTitle>
           <CardDescription>
             Weekly (Fri–Thu) application cadence over the last 8 weeks
           </CardDescription>
         </div>
-        <span className="text-xs font-mono text-zinc-400">
+        <span className="text-xs font-mono text-muted-foreground">
           {totalInPeriod} total
         </span>
       </CardHeader>
@@ -60,20 +60,20 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
             >
               <defs>
                 <linearGradient id="appPaceGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#e4e4e7" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#e4e4e7" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="hsl(var(--foreground))" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="hsl(var(--foreground))" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="2 2" stroke="#27272a" vertical={false} />
+              <CartesianGrid strokeDasharray="2 2" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
                 dataKey="week"
-                stroke="#71717a"
+                stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#71717a"
+                stroke="hsl(var(--muted-foreground))"
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
@@ -83,7 +83,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
               <Area
                 type="monotone"
                 dataKey="count"
-                stroke="#e4e4e7"
+                stroke="hsl(var(--foreground))"
                 strokeWidth={1.5}
                 fillOpacity={1}
                 fill="url(#appPaceGradient)"

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card } from "../ui/Card";
+import { Card } from "@/components/ui/card";
 import { DashboardSummary } from "@/lib/types";
 
 interface MetricsOverviewProps {
@@ -45,11 +45,11 @@ export function MetricsOverview({ data }: MetricsOverviewProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {metrics.map((metric) => (
-        <Card key={metric.title} className="p-3.5 bg-zinc-900/50 border-zinc-800">
-          <span className="text-[11px] font-medium text-zinc-400 block">{metric.title}</span>
+        <Card key={metric.title} className="p-3.5">
+          <span className="text-[11px] font-medium text-muted-foreground block">{metric.title}</span>
           <div className="mt-1">
-            <span className="text-xl font-semibold tracking-tight text-zinc-100">{metric.value}</span>
-            <p className="text-[10px] text-zinc-500 mt-0.5">{metric.description}</p>
+            <span className="text-xl font-semibold tracking-tight text-foreground">{metric.value}</span>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{metric.description}</p>
           </div>
         </Card>
       ))}

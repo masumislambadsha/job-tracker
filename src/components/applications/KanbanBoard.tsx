@@ -15,7 +15,7 @@ import {
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanCard } from "./KanbanCard";
 import { ApplicationItem, ApplicationStatus } from "@/lib/types";
-import { Tabs } from "../ui/Tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface KanbanBoardProps {
   applications: ApplicationItem[];
@@ -88,16 +88,18 @@ export function KanbanBoard({
     <div className="space-y-4">
       {/* Mobile Stage Switcher */}
       <div className="block lg:hidden overflow-x-auto pb-1">
-        <Tabs
-          tabs={KANBAN_STAGES.map((stage) => ({
-            id: stage.id,
-            label: stage.label,
-            count: applications.filter((a) => stage.statuses.includes(a.status)).length,
-          }))}
-          activeTab={mobileActiveStage}
-          onChange={setMobileActiveStage}
-          className="w-max"
-        />
+        <Tabs value={mobileActiveStage} onValueChange={setMobileActiveStage}>
+          <TabsList className="w-max">
+            {KANBAN_STAGES.map((stage) => (
+              <TabsTrigger key={stage.id} value={stage.id}>
+                {stage.label}
+                <span className="ml-1.5 rounded bg-secondary px-1.5 text-[10px] font-mono text-muted-foreground">
+                  {applications.filter((a) => stage.statuses.includes(a.status)).length}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
       <DndContext

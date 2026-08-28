@@ -212,6 +212,13 @@ export async function POST(request: Request) {
       },
     });
 
+    // Fire-and-forget Google Sheets sync
+    import("@/lib/google-sheets").then(({ appendApplication }) => {
+      appendApplication(populated).catch((err) =>
+        console.error("[Sheets Sync] Background error:", err.message)
+      );
+    });
+
     return NextResponse.json(populated, { status: 201 });
   } catch (error) {
     console.error("Applications POST error:", error);

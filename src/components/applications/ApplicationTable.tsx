@@ -12,7 +12,23 @@ import {
   getStatusConfig,
   isDateOverdue,
 } from "@/lib/utils";
-import { Badge } from "../ui/Badge";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   ExternalLink,
   Star,
@@ -37,9 +53,7 @@ export function ApplicationTable({
   const router = useRouter();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const handleStatusSelect = async (e: React.ChangeEvent<HTMLSelectElement>, app: ApplicationItem) => {
-    e.stopPropagation();
-    const newStatus = e.target.value as ApplicationStatus;
+  const handleStatusSelect = async (newStatus: ApplicationStatus, app: ApplicationItem) => {
     if (newStatus === app.status) return;
 
     try {
@@ -81,8 +95,7 @@ export function ApplicationTable({
     }
   };
 
-  const handleDeleteClick = async (e: React.MouseEvent, id: string, company: string) => {
-    e.stopPropagation();
+  const handleDeleteClick = async (id: string, company: string) => {
     if (!confirm(`Delete application for ${company}?`)) return;
 
     try {
@@ -99,10 +112,10 @@ export function ApplicationTable({
 
   if (applications.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-zinc-800 bg-zinc-950 p-12 text-center">
-        <Briefcase className="h-8 w-8 text-zinc-600 mb-2" />
-        <h3 className="text-xs font-semibold text-zinc-300">No applications found</h3>
-        <p className="text-[11px] text-zinc-500 mt-0.5 max-w-xs">
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
+        <Briefcase className="h-8 w-8 text-muted-foreground mb-2" />
+        <h3 className="text-sm font-semibold">No applications found</h3>
+        <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">
           Try adjusting your search filters or click &quot;New Application&quot; to log a job.
         </p>
       </div>
@@ -110,150 +123,152 @@ export function ApplicationTable({
   }
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-950 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs border-collapse">
-          <thead>
-            <tr className="border-b border-zinc-800 bg-zinc-900/60 text-zinc-400 font-medium">
-              <th className="sticky left-0 z-10 bg-zinc-900 px-3.5 py-2.5 font-medium min-w-[170px] shadow-[1px_0_0_0_#27272a]">
-                Company
-              </th>
-              <th className="px-3 py-2.5 font-medium min-w-[150px]">Position</th>
-              <th className="px-3 py-2.5 font-medium min-w-[140px]">Status</th>
-              <th className="px-3 py-2.5 font-medium min-w-[100px] font-mono">Date</th>
-              <th className="px-3 py-2.5 font-medium min-w-[120px]">Follow-up</th>
-              <th className="px-3 py-2.5 font-medium min-w-[120px]">Source</th>
-              <th className="px-3 py-2.5 font-medium min-w-[90px]">Priority</th>
-              <th className="px-3 py-2.5 font-medium min-w-[110px] font-mono">Salary</th>
-              <th className="px-3 py-2.5 font-medium text-right min-w-[60px]">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-850">
-            {applications.map((app) => {
-              const statusConfig = getStatusConfig(app.status);
-              const overdue = isDateOverdue(app.followUpDate, app.status);
+    <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent border-border bg-muted/50">
+            <TableHead className="sticky left-0 z-10 bg-muted/50 min-w-[170px]">Company</TableHead>
+            <TableHead className="min-w-[150px]">Position</TableHead>
+            <TableHead className="min-w-[140px]">Status</TableHead>
+            <TableHead className="min-w-[100px] font-mono">Date</TableHead>
+            <TableHead className="min-w-[120px]">Follow-up</TableHead>
+            <TableHead className="min-w-[120px]">Source</TableHead>
+            <TableHead className="min-w-[90px]">Priority</TableHead>
+            <TableHead className="min-w-[110px] font-mono">Salary</TableHead>
+            <TableHead className="text-right min-w-[60px]">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {applications.map((app) => {
+            const statusConfig = getStatusConfig(app.status);
+            const overdue = isDateOverdue(app.followUpDate, app.status);
 
-              return (
-                <tr
-                  key={app.id}
-                  onClick={() => router.push(`/applications/${app.id}`)}
-                  className="group cursor-pointer hover:bg-zinc-900/50 transition-colors"
-                >
-                  {/* Sticky Company Column */}
-                  <td className="sticky left-0 z-10 bg-zinc-950 group-hover:bg-zinc-900/90 px-3.5 py-2.5 shadow-[1px_0_0_0_#27272a]">
-                    <span className="font-semibold text-zinc-100 group-hover:underline block truncate">
-                      {app.company}
+            return (
+              <TableRow
+                key={app.id}
+                onClick={() => router.push(`/applications/${app.id}`)}
+                className="cursor-pointer hover:bg-accent/50"
+              >
+                {/* Sticky Company Column */}
+                <TableCell className="sticky left-0 z-10 bg-card group-hover:bg-accent/90 font-semibold">
+                  <span className="block truncate text-foreground group-hover:underline">
+                    {app.company}
+                  </span>
+                  {app.companyLocation && (
+                    <span className="text-[10px] text-muted-foreground block truncate">
+                      {app.companyLocation}
                     </span>
-                    {app.companyLocation && (
-                      <span className="text-[10px] text-zinc-500 block truncate">
-                        {app.companyLocation}
-                      </span>
-                    )}
-                  </td>
+                  )}
+                </TableCell>
 
-                  {/* Position */}
-                  <td className="px-3 py-2.5 text-zinc-300">
-                    <span className="truncate block max-w-[200px]">{app.position}</span>
-                  </td>
+                {/* Position */}
+                <TableCell className="text-muted-foreground">
+                  <span className="truncate block max-w-[200px]">{app.position}</span>
+                </TableCell>
 
-                  {/* Status Inline Dropdown */}
-                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={app.status}
-                      onChange={(e) => handleStatusSelect(e, app)}
-                      disabled={updatingId === app.id}
-                      className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[11px] font-medium text-zinc-200 focus:border-zinc-600 focus:outline-none"
-                    >
+                {/* Status Inline Dropdown */}
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={app.status}
+                    onValueChange={(v) => handleStatusSelect(v as ApplicationStatus, app)}
+                    disabled={updatingId === app.id}
+                  >
+                    <SelectTrigger className="h-7 w-[150px] text-[11px] font-medium">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
                       {STATUS_PIPELINE.map((s) => (
-                        <option key={s.id} value={s.id} className="bg-zinc-900 text-zinc-200">
+                        <SelectItem key={s.id} value={s.id} className="text-xs">
                           {s.label}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </select>
-                  </td>
+                    </SelectContent>
+                  </Select>
+                </TableCell>
 
-                  {/* Date Applied */}
-                  <td className="px-3 py-2.5 text-zinc-400 font-mono text-[11px]">
-                    {formatDate(app.dateApplied, "yyyy-MM-dd")}
-                  </td>
+                {/* Date Applied */}
+                <TableCell className="text-muted-foreground font-mono text-[11px]">
+                  {formatDate(app.dateApplied, "yyyy-MM-dd")}
+                </TableCell>
 
-                  {/* Follow-up Date */}
-                  <td className="px-3 py-2.5">
-                    {app.followUpDate ? (
-                      <span
-                        className={`text-[11px] font-mono ${
-                          overdue ? "text-red-400 font-bold" : "text-zinc-400"
-                        }`}
-                      >
-                        {formatDate(app.followUpDate, "MMM d")}
-                        {overdue && " (Overdue)"}
-                      </span>
-                    ) : (
-                      <span className="text-zinc-600">—</span>
-                    )}
-                  </td>
-
-                  {/* Portal */}
-                  <td className="px-3 py-2.5 text-zinc-400 text-xs">
-                    {app.portal?.name || app.howApplied || "—"}
-                  </td>
-
-                  {/* Priority */}
-                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => handlePrioritySelect(star, app)}
-                          className="text-zinc-700 hover:text-zinc-300"
-                        >
-                          <Star
-                            className={`h-3 w-3 ${
-                              star <= (app.priority || 0)
-                                ? "fill-zinc-300 text-zinc-300"
-                                : "text-zinc-800"
-                            }`}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </td>
-
-                  {/* Salary */}
-                  <td className="px-3 py-2.5 text-zinc-400 font-mono text-[11px]">
-                    {formatSalaryRange(app.salaryMin, app.salaryMax, app.currency || "USD")}
-                  </td>
-
-                  {/* Actions */}
-                  <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-end gap-1">
-                      {app.jobLink && (
-                        <a
-                          href={app.jobLink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="rounded p-1 text-zinc-500 hover:text-zinc-200"
-                          title="Open job link"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
+                {/* Follow-up Date */}
+                <TableCell>
+                  {app.followUpDate ? (
+                    <span
+                      className={cn(
+                        "text-[11px] font-mono",
+                        overdue ? "text-destructive font-bold" : "text-muted-foreground"
                       )}
+                    >
+                      {formatDate(app.followUpDate, "MMM d")}
+                      {overdue && " (Overdue)"}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/50">—</span>
+                  )}
+                </TableCell>
+
+                {/* Portal */}
+                <TableCell className="text-muted-foreground text-xs">
+                  {app.portal?.name || app.howApplied || "—"}
+                </TableCell>
+
+                {/* Priority */}
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
                       <button
-                        onClick={(e) => handleDeleteClick(e, app.id, app.company)}
-                        className="rounded p-1 text-zinc-500 hover:text-red-400"
-                        title="Delete"
+                        key={star}
+                        type="button"
+                        onClick={() => handlePrioritySelect(star, app)}
+                        className="text-muted-foreground/30 hover:text-foreground"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Star
+                          className={cn(
+                            "h-3 w-3",
+                            star <= (app.priority || 0)
+                              ? "fill-foreground text-foreground"
+                              : ""
+                          )}
+                        />
                       </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                    ))}
+                  </div>
+                </TableCell>
+
+                {/* Salary */}
+                <TableCell className="text-muted-foreground font-mono text-[11px]">
+                  {formatSalaryRange(app.salaryMin, app.salaryMax, app.currency || "USD")}
+                </TableCell>
+
+                {/* Actions */}
+                <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center justify-end gap-1">
+                    {app.jobLink && (
+                      <a
+                        href={app.jobLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded p-1 text-muted-foreground hover:text-foreground"
+                        title="Open job link"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    )}
+                    <button
+                      onClick={() => handleDeleteClick(app.id, app.company)}
+                      className="rounded p-1 text-muted-foreground hover:text-destructive"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
   );
 }

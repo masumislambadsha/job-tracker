@@ -1,10 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal } from "../ui/Modal";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
-import { Select } from "../ui/Select";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PortalItem } from "@/lib/types";
 
 interface PortalModalProps {
@@ -68,62 +83,71 @@ export function PortalModal({ isOpen, onClose, portal, onSuccess }: PortalModalP
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={portal ? "Edit Job Portal" : "Add Custom Job Portal"}
-      description="Track new job boards, community listings, and monitor their response rates."
-      maxWidth="md"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Portal Name"
-          placeholder="e.g. Wellfound, Otta"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{portal ? "Edit Job Portal" : "Add Custom Job Portal"}</DialogTitle>
+          <DialogDescription>
+            Track new job boards, community listings, and monitor their response rates.
+          </DialogDescription>
+        </DialogHeader>
 
-        <Input
-          label="Website URL"
-          type="url"
-          placeholder="https://..."
-          required
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1">
+            <Label>Portal Name</Label>
+            <Input
+              placeholder="e.g. Wellfound, Otta"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
 
-        <Select
-          label="Check Frequency / Tier"
-          value={tier}
-          onChange={(e) => setTier(Number(e.target.value))}
-          options={[
-            { value: 1, label: "Tier 1 — Check Daily (High volume / premium)" },
-            { value: 2, label: "Tier 2 — Weekly Sweep (Curated niche boards)" },
-            { value: 3, label: "Tier 3 — Reference / Framework-specific" },
-          ]}
-        />
+          <div className="space-y-1">
+            <Label>Website URL</Label>
+            <Input
+              type="url"
+              placeholder="https://..."
+              required
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+            />
+          </div>
 
-        <div className="space-y-1.5">
-          <label className="block text-xs font-medium text-slate-300">Notes / Best strategies</label>
-          <textarea
-            rows={3}
-            placeholder="Specializes in React/Next.js roles, direct founder DMs, post times..."
-            className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
+          <div className="space-y-1">
+            <Label>Check Frequency / Tier</Label>
+            <Select value={String(tier)} onValueChange={(v) => setTier(Number(v))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">Tier 1 — Check Daily (High volume / premium)</SelectItem>
+                <SelectItem value="2">Tier 2 — Weekly Sweep (Curated niche boards)</SelectItem>
+                <SelectItem value="3">Tier 3 — Reference / Framework-specific</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" isLoading={isSubmitting}>
-            {portal ? "Update Portal" : "Add Portal"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          <div className="space-y-1">
+            <Label>Notes / Best strategies</Label>
+            <Textarea
+              rows={3}
+              placeholder="Specializes in React/Next.js roles, direct founder DMs, post times..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : portal ? "Update Portal" : "Add Portal"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

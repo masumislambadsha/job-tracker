@@ -1,11 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Modal } from "../ui/Modal";
-import { Button } from "../ui/Button";
-import { Input } from "../ui/Input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ResumeVersionItem } from "@/lib/types";
-import { Upload, FileText, CheckCircle2, Link2 } from "lucide-react";
+import { Upload, FileText, CheckCircle2, Link2, Loader2 } from "lucide-react";
 
 interface ResumeModalProps {
   isOpen: boolean;
@@ -117,128 +126,137 @@ export function ResumeModal({ isOpen, onClose, resume, onSuccess }: ResumeModalP
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={resume ? "Edit Resume Version" : "Upload PDF Resume"}
-      description="Upload your PDF resume to track variants and compute callback response rates."
-      maxWidth="md"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Toggle Mode */}
-        <div className="flex rounded-md border border-zinc-800 bg-zinc-900 p-0.5">
-          <button
-            type="button"
-            onClick={() => setMode("upload")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1 text-xs font-medium rounded transition-colors ${
-              mode === "upload"
-                ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            <Upload className="h-3.5 w-3.5" />
-            <span>Upload PDF File</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("url")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1 text-xs font-medium rounded transition-colors ${
-              mode === "url"
-                ? "bg-zinc-800 text-zinc-100 shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
-            }`}
-          >
-            <Link2 className="h-3.5 w-3.5" />
-            <span>Google Drive / URL</span>
-          </button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{resume ? "Edit Resume Version" : "Upload PDF Resume"}</DialogTitle>
+          <DialogDescription>
+            Upload your PDF resume to track variants and compute callback response rates.
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Upload Mode Area with Drag & Drop */}
-        {mode === "upload" ? (
-          <div className="space-y-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".pdf"
-              onChange={handleFileInputChange}
-              className="hidden"
-            />
-
-            <div
-              onDragOver={(e) => {
-                e.preventDefault();
-                setIsDraggingOver(true);
-              }}
-              onDragLeave={() => setIsDraggingOver(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 border-dashed transition-all cursor-pointer text-center ${
-                isDraggingOver
-                  ? "border-zinc-400 bg-zinc-800/60"
-                  : url
-                  ? "border-emerald-700/50 bg-emerald-950/15"
-                  : "border-zinc-800 hover:border-zinc-700 bg-zinc-900/40"
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Toggle Mode */}
+          <div className="flex rounded-md border bg-muted p-0.5">
+            <button
+              type="button"
+              onClick={() => setMode("upload")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1 text-xs font-medium rounded transition-colors ${
+                mode === "upload"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {isUploading ? (
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
-                  <span>Uploading PDF...</span>
-                </div>
-              ) : url ? (
-                <div className="flex flex-col items-center gap-1">
-                  <CheckCircle2 className="h-7 w-7 text-emerald-400" />
-                  <span className="text-xs font-semibold text-zinc-200">{uploadedFileName || "PDF Attached"}</span>
-                  <span className="text-[11px] text-zinc-500">Click or drag another file to replace</span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800 text-zinc-400">
-                    <FileText className="h-5 w-5" />
-                  </div>
-                  <span className="text-xs font-semibold text-zinc-200">
-                    Drag & Drop your PDF resume here
-                  </span>
-                  <span className="text-[11px] text-zinc-500">or click to browse from your computer</span>
-                </div>
-              )}
-            </div>
+              <Upload className="h-3.5 w-3.5" />
+              <span>Upload PDF File</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("url")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-1 text-xs font-medium rounded transition-colors ${
+                mode === "url"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              <span>Google Drive / URL</span>
+            </button>
           </div>
-        ) : (
-          <Input
-            label="Google Drive / Web URL"
-            type="url"
-            placeholder="https://drive.google.com/file/d/..."
-            required
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            helperText="Paste your public Google Drive or hosted PDF URL."
-          />
-        )}
 
-        <Input
-          label="Resume Label"
-          placeholder="e.g. Next.js / TypeScript Specialist"
-          required
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          helperText="A clear name to select in dropdowns when logging applications."
-        />
+          {/* Upload Mode Area with Drag & Drop */}
+          {mode === "upload" ? (
+            <div className="space-y-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".pdf"
+                onChange={handleFileInputChange}
+                className="hidden"
+              />
 
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-800">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            isLoading={isSubmitting}
-            disabled={!label || !url || isUploading}
-          >
-            {resume ? "Update Resume" : "Save Resume"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDraggingOver(true);
+                }}
+                onDragLeave={() => setIsDraggingOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 border-dashed transition-all cursor-pointer text-center ${
+                  isDraggingOver
+                    ? "border-primary bg-accent"
+                    : url
+                    ? "border-emerald-500/50 bg-emerald-950/15"
+                    : "border-border hover:border-muted-foreground/40 bg-card"
+                }`}
+              >
+                {isUploading ? (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Uploading PDF...</span>
+                  </div>
+                ) : url ? (
+                  <div className="flex flex-col items-center gap-1">
+                    <CheckCircle2 className="h-7 w-7 text-emerald-400" />
+                    <span className="text-xs font-semibold text-foreground">{uploadedFileName || "PDF Attached"}</span>
+                    <span className="text-[11px] text-muted-foreground">Click or drag another file to replace</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <FileText className="h-5 w-5" />
+                    </div>
+                    <span className="text-xs font-semibold text-foreground">
+                      Drag & Drop your PDF resume here
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">or click to browse from your computer</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <Label>Google Drive / Web URL</Label>
+              <Input
+                type="url"
+                placeholder="https://drive.google.com/file/d/..."
+                required
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste your public Google Drive or hosted PDF URL.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <Label>Resume Label</Label>
+            <Input
+              placeholder="e.g. Next.js / TypeScript Specialist"
+              required
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              A clear name to select in dropdowns when logging applications.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!label || !url || isUploading}
+            >
+              {isSubmitting ? "Saving..." : resume ? "Update Resume" : "Save Resume"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

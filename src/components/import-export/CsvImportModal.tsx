@@ -2,9 +2,15 @@
 
 import React, { useState, useRef } from "react";
 import Papa from "papaparse";
-import { Modal } from "../ui/Modal";
-import { Button } from "../ui/Button";
-import { Badge } from "../ui/Badge";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Upload, CheckCircle2, AlertCircle, FileText, ArrowRight, Sparkles } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
@@ -99,146 +105,153 @@ export function CsvImportModal({ isOpen, onClose, onSuccess }: CsvImportModalPro
   };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={() => {
-        resetState();
-        onClose();
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          resetState();
+          onClose();
+        }
       }}
-      title="Import Google Sheet / CSV"
-      description="Upload your existing spreadsheet. Column mapping matching Appendix B is applied automatically."
-      maxWidth="2xl"
     >
-      {/* STEP 1: Upload */}
-      {step === "upload" && (
-        <div className="space-y-4">
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/40 p-8 text-center hover:border-indigo-500 hover:bg-slate-900/80 transition-all cursor-pointer group"
-          >
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 group-hover:scale-110 transition-transform">
-              <Upload className="h-6 w-6" />
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Import Google Sheet / CSV</DialogTitle>
+          <DialogDescription>
+            Upload your existing spreadsheet. Column mapping matching Appendix B is applied automatically.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* STEP 1: Upload */}
+        {step === "upload" && (
+          <div className="space-y-4">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card p-8 text-center hover:border-primary hover:bg-accent transition-all cursor-pointer group"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-foreground border border-border group-hover:scale-110 transition-transform">
+                <Upload className="h-6 w-6" />
+              </div>
+              <h3 className="mt-3 text-sm font-semibold text-foreground">
+                {file ? file.name : "Click to select or drop CSV file"}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pre-configured for Google Sheet format (Date, Company, Position, Job Status, Resume Drive...)
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleFileChange}
+                className="hidden"
+              />
             </div>
-            <h3 className="mt-3 text-sm font-semibold text-white">
-              {file ? file.name : "Click to select or drop CSV file"}
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Pre-configured for Google Sheet format (Date, Company, Position, Job Status, Resume Drive...)
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </div>
 
-          <div className="rounded-xl bg-slate-950/60 p-3.5 border border-slate-800 text-xs text-slate-400 space-y-1">
-            <span className="font-semibold text-slate-200 block">Pre-Mapped Columns (Appendix B):</span>
-            <p>• Date, Company, Position, Job Status, Job Nature, Job Type, Location, Resume Drive, How Applied, Comments</p>
+            <div className="rounded-xl bg-muted p-3.5 border text-xs text-muted-foreground space-y-1">
+              <span className="font-semibold text-foreground block">Pre-Mapped Columns (Appendix B):</span>
+              <p>• Date, Company, Position, Job Status, Job Nature, Job Type, Location, Resume Drive, How Applied, Comments</p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* STEP 2: Preview & Duplicate Detection */}
-      {step === "preview" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950/80 border border-slate-800">
+        {/* STEP 2: Preview & Duplicate Detection */}
+        {step === "preview" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-card border">
+              <div>
+                <span className="text-xs font-semibold text-foreground">
+                  {parsedRows.length} Rows Found
+                </span>
+                <p className="text-[11px] text-muted-foreground">
+                  Ready to migrate into your JobDesk pipeline
+                </p>
+              </div>
+
+              {duplicatesCount > 0 ? (
+                <Badge variant="warning">
+                  {duplicatesCount} Duplicates Skipped
+                </Badge>
+              ) : (
+                <Badge variant="success">
+                  0 Duplicates
+                </Badge>
+              )}
+            </div>
+
+            {/* Preview sample table */}
+            <div className="rounded-xl border bg-card overflow-hidden">
+              <div className="px-3 py-2 border-b text-[11px] font-semibold text-muted-foreground">
+                Sample Mapped Rows Preview (First 5):
+              </div>
+              <div className="overflow-x-auto max-h-48">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b text-muted-foreground bg-muted/50">
+                      <th className="p-2">Company</th>
+                      <th className="p-2">Position</th>
+                      <th className="p-2">Date Applied</th>
+                      <th className="p-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y border-border">
+                    {previewData.slice(0, 5).map((row, idx) => (
+                      <tr key={idx} className={row.isDuplicate ? "opacity-50 line-through" : ""}>
+                        <td className="p-2 font-medium text-foreground">{row.company}</td>
+                        <td className="p-2 text-muted-foreground">{row.position}</td>
+                        <td className="p-2 text-muted-foreground">{formatDate(row.dateApplied)}</td>
+                        <td className="p-2 font-semibold text-foreground">{row.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t">
+              <Button variant="ghost" onClick={resetState}>
+                Upload Different File
+              </Button>
+              <Button
+                onClick={handleCommitImport}
+                disabled={isCommitting}
+                className="gap-1.5"
+              >
+                <Sparkles className="h-4 w-4" />
+                Confirm & Import Rows
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Done */}
+        {step === "done" && importResult && (
+          <div className="text-center py-6 space-y-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 mx-auto">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+
             <div>
-              <span className="text-xs font-semibold text-white">
-                {parsedRows.length} Rows Found
-              </span>
-              <p className="text-[11px] text-slate-400">
-                Ready to migrate into your JobDesk pipeline
+              <h3 className="text-base font-bold">Migration Complete!</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Successfully imported{" "}
+                <span className="text-emerald-400 font-bold">{importResult.importedCount}</span> applications
+                {importResult.skippedDuplicates > 0 &&
+                  ` (${importResult.skippedDuplicates} duplicates skipped)`}
+                .
               </p>
             </div>
 
-            {duplicatesCount > 0 ? (
-              <Badge variant="warning">
-                {duplicatesCount} Duplicates Skipped
-              </Badge>
-            ) : (
-              <Badge variant="success">
-                0 Duplicates
-              </Badge>
-            )}
-          </div>
-
-          {/* Preview sample table */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden">
-            <div className="px-3 py-2 border-b border-slate-800 text-[11px] font-semibold text-slate-400">
-              Sample Mapped Rows Preview (First 5):
-            </div>
-            <div className="overflow-x-auto max-h-48">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 bg-slate-900/60">
-                    <th className="p-2">Company</th>
-                    <th className="p-2">Position</th>
-                    <th className="p-2">Date Applied</th>
-                    <th className="p-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {previewData.slice(0, 5).map((row, idx) => (
-                    <tr key={idx} className={row.isDuplicate ? "opacity-50 line-through" : ""}>
-                      <td className="p-2 font-medium text-slate-200">{row.company}</td>
-                      <td className="p-2 text-slate-300">{row.position}</td>
-                      <td className="p-2 text-slate-400">{formatDate(row.dateApplied)}</td>
-                      <td className="p-2 font-semibold text-indigo-400">{row.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-            <Button variant="ghost" onClick={resetState}>
-              Upload Different File
-            </Button>
             <Button
-              variant="primary"
-              isLoading={isCommitting}
-              onClick={handleCommitImport}
-              leftIcon={<Sparkles className="h-4 w-4" />}
+              onClick={() => {
+                resetState();
+                onClose();
+              }}
             >
-              Confirm & Import Rows
+              Go to Applications Table
             </Button>
           </div>
-        </div>
-      )}
-
-      {/* STEP 3: Done */}
-      {step === "done" && importResult && (
-        <div className="text-center py-6 space-y-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 mx-auto">
-            <CheckCircle2 className="h-6 w-6" />
-          </div>
-
-          <div>
-            <h3 className="text-base font-bold text-white">Migration Complete!</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Successfully imported{" "}
-              <span className="text-emerald-400 font-bold">{importResult.importedCount}</span> applications
-              {importResult.skippedDuplicates > 0 &&
-                ` (${importResult.skippedDuplicates} duplicates skipped)`}
-              .
-            </p>
-          </div>
-
-          <Button
-            variant="primary"
-            onClick={() => {
-              resetState();
-              onClose();
-            }}
-          >
-            Go to Applications Table
-          </Button>
-        </div>
-      )}
-    </Modal>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

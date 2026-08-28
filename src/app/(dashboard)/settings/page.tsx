@@ -1,17 +1,23 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { CsvImportModal } from "@/components/import-export/CsvImportModal";
 import { CURRENCIES } from "@/lib/constants";
 import {
   Settings,
   Download,
   Upload,
-  User,
   Bell,
   Database,
   Sparkles,
@@ -57,18 +63,18 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
           <Settings className="h-6 w-6 text-indigo-400" />
           <span>Settings & Data Management</span>
         </h1>
-        <p className="text-xs text-slate-400 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Customize follow-up reminders, manage CSV spreadsheet migration, and configure defaults.
         </p>
       </div>
 
       {/* Migration & Backup Card (CSV Import / Export) */}
-      <Card className="border-indigo-500/30 bg-gradient-to-br from-indigo-950/20 via-slate-900/60 to-slate-900/80">
-        <CardHeader className="pb-3 border-b border-slate-800">
+      <Card className="border-indigo-500/30 bg-card">
+        <CardHeader className="pb-3 border-b border-border">
           <CardTitle className="text-sm flex items-center gap-2">
             <Database className="h-4 w-4 text-indigo-400" />
             <span>Google Sheet Migration & CSV Backup</span>
@@ -81,29 +87,28 @@ export default function SettingsPage() {
         <CardContent className="space-y-4 pt-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Import */}
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2 flex flex-col justify-between">
+            <div className="p-4 rounded-xl bg-background border border-border space-y-2 flex flex-col justify-between">
               <div>
-                <span className="text-xs font-bold text-white block">Import Google Sheet (CSV)</span>
-                <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
+                <span className="text-xs font-bold text-foreground block">Import Google Sheet (CSV)</span>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">
                   Upload your spreadsheet exported as CSV. Pre-mapped with automatic duplicate skipping.
                 </p>
               </div>
               <Button
-                variant="primary"
                 size="sm"
                 onClick={() => setIsImportModalOpen(true)}
-                leftIcon={<Upload className="h-3.5 w-3.5" />}
                 className="w-full mt-2"
               >
+                <Upload className="h-3.5 w-3.5" />
                 Import CSV File
               </Button>
             </div>
 
             {/* Export */}
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2 flex flex-col justify-between">
+            <div className="p-4 rounded-xl bg-background border border-border space-y-2 flex flex-col justify-between">
               <div>
-                <span className="text-xs font-bold text-white block">Export Full Pipeline (CSV)</span>
-                <p className="text-[11px] text-slate-400 leading-relaxed mt-1">
+                <span className="text-xs font-bold text-foreground block">Export Full Pipeline (CSV)</span>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">
                   Download all your applications, tags, salaries, and notes as standard CSV anytime.
                 </p>
               </div>
@@ -111,9 +116,9 @@ export default function SettingsPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  leftIcon={<Download className="h-3.5 w-3.5" />}
                   className="w-full"
                 >
+                  <Download className="h-3.5 w-3.5" />
                   Download CSV
                 </Button>
               </a>
@@ -125,7 +130,7 @@ export default function SettingsPage() {
       {/* Reminder & Pipeline Preferences */}
       <form onSubmit={handleSavePreferences}>
         <Card>
-          <CardHeader className="pb-3 border-b border-slate-800">
+          <CardHeader className="pb-3 border-b border-border">
             <CardTitle className="text-sm flex items-center gap-2">
               <Bell className="h-4 w-4 text-amber-400" />
               <span>Pipeline & Reminder Preferences</span>
@@ -137,28 +142,40 @@ export default function SettingsPage() {
 
           <CardContent className="space-y-4 pt-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Follow-up Reminder Cadence (Days)"
-                type="number"
-                min={1}
-                max={60}
-                value={reminderDays}
-                onChange={(e) => setReminderDays(e.target.value)}
-                helperText="Defaults to 7 days after application with no reply."
-              />
+              <div className="space-y-1">
+                <Label htmlFor="reminderDays">Follow-up Reminder Cadence (Days)</Label>
+                <Input
+                  id="reminderDays"
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={reminderDays}
+                  onChange={(e) => setReminderDays(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">Defaults to 7 days after application with no reply.</p>
+              </div>
 
-              <Select
-                label="Default Compensation Currency"
-                value={defaultCurrency}
-                onChange={(e) => setDefaultCurrency(e.target.value)}
-                options={CURRENCIES.map((c) => ({ value: c, label: c }))}
-              />
+              <div className="space-y-1">
+                <Label>Default Compensation Currency</Label>
+                <Select value={defaultCurrency} onValueChange={setDefaultCurrency}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
 
           <CardFooter className="flex justify-end pt-3">
-            <Button type="submit" variant="primary" size="sm" isLoading={isSavingPref}>
-              Save Preferences
+            <Button type="submit" size="sm" disabled={isSavingPref}>
+              {isSavingPref ? "Saving..." : "Save Preferences"}
             </Button>
           </CardFooter>
         </Card>
@@ -166,7 +183,7 @@ export default function SettingsPage() {
 
       {/* Verified Portals Seed / Resync */}
       <Card>
-        <CardHeader className="pb-3 border-b border-slate-800">
+        <CardHeader className="pb-3 border-b border-border">
           <CardTitle className="text-sm flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-emerald-400" />
             <span>Curated Directory Sync</span>
@@ -178,7 +195,7 @@ export default function SettingsPage() {
 
         <CardContent className="pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <p className="text-xs text-slate-300">
+            <p className="text-xs text-muted-foreground">
               Ensures all 24 Tier 1, 2, and 3 portals are populated in your directory.
             </p>
             {seedMessage && (
@@ -192,19 +209,19 @@ export default function SettingsPage() {
           <Button
             size="sm"
             variant="secondary"
-            isLoading={isSeeding}
+            disabled={isSeeding}
             onClick={handleSyncPortals}
           >
-            Sync Verified Portals
+            {isSeeding ? "Syncing..." : "Sync Verified Portals"}
           </Button>
         </CardContent>
       </Card>
 
       {/* Danger Zone: Clear Pipeline Data */}
-      <Card className="border-rose-500/30 bg-rose-950/10">
-        <CardHeader className="pb-3 border-b border-slate-800/80">
-          <CardTitle className="text-sm text-rose-300 flex items-center gap-2">
-            <Shield className="h-4 w-4 text-rose-400" />
+      <Card className="border-destructive/30 bg-destructive/10">
+        <CardHeader className="pb-3 border-b border-border">
+          <CardTitle className="text-sm text-destructive flex items-center gap-2">
+            <Shield className="h-4 w-4 text-destructive" />
             <span>Reset Pipeline Data</span>
           </CardTitle>
           <CardDescription>
@@ -213,7 +230,7 @@ export default function SettingsPage() {
         </CardHeader>
 
         <CardContent className="pt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             Wipes all application entries to give you a clean slate before importing your real spreadsheet.
           </p>
 

@@ -29,7 +29,7 @@ export function AppShell({ user, children }: AppShellProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col antialiased">
+    <div className="flex min-h-screen flex-col bg-background text-foreground antialiased">
       {/* Desktop Sidebar */}
       <Sidebar
         onOpenQuickAdd={() => setIsQuickAddOpen(true)}

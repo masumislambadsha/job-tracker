@@ -1,33 +1,30 @@
-import React, { ButtonHTMLAttributes, forwardRef } from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import * as React from "react"
+import { Slot } from "@radix-ui/react-slot"
+import { cva, type VariantProps } from "class-variance-authority"
+
+import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 active:scale-[0.99]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-sm",
-        primary:
-          "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-sm",
-        secondary:
-          "bg-zinc-800/80 text-zinc-200 hover:bg-zinc-800 border border-zinc-750",
-        outline:
-          "border border-zinc-800 bg-transparent text-zinc-200 hover:bg-zinc-850 hover:text-zinc-100",
-        ghost:
-          "text-zinc-400 hover:bg-zinc-850 hover:text-zinc-100",
+          "bg-primary text-primary-foreground shadow hover:bg-primary/90",
         destructive:
-          "bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30",
-        success:
-          "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30",
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        outline:
+          "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+        secondary:
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-8 px-3 py-1.5",
-        sm: "h-7 rounded px-2.5 text-[11px]",
-        lg: "h-9 rounded-md px-4 text-xs font-semibold",
-        icon: "h-8 w-8 p-0",
+        default: "h-9 px-4 py-2",
+        sm: "h-8 rounded-md px-3 text-xs",
+        lg: "h-10 rounded-md px-8",
+        icon: "h-9 w-9",
       },
     },
     defaultVariants: {
@@ -35,37 +32,26 @@ const buttonVariants = cva(
       size: "default",
     },
   }
-);
+)
 
 export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
-  isLoading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  asChild?: boolean
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, isLoading, leftIcon, rightIcon, children, disabled, ...props }, ref) => {
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button"
     return (
-      <button
-        ref={ref}
+      <Comp
         className={cn(buttonVariants({ variant, size, className }))}
-        disabled={disabled || isLoading}
+        ref={ref}
         {...props}
-      >
-        {isLoading ? (
-          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin text-current" />
-        ) : leftIcon ? (
-          <span className="mr-1.5 inline-flex items-center">{leftIcon}</span>
-        ) : null}
-        {children}
-        {!isLoading && rightIcon && (
-          <span className="ml-1.5 inline-flex items-center">{rightIcon}</span>
-        )}
-      </button>
-    );
+      />
+    )
   }
-);
+)
+Button.displayName = "Button"
 
-Button.displayName = "Button";
+export { Button, buttonVariants }

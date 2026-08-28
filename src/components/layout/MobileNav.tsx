@@ -18,7 +18,7 @@ export function MobileNav() {
 
   const navItems = [
     {
-      name: "Dashboard",
+      name: "Home",
       href: "/dashboard",
       icon: LayoutDashboard,
       current: pathname === "/dashboard",
@@ -50,7 +50,7 @@ export function MobileNav() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 flex h-16 items-center justify-around border-t border-slate-800 bg-slate-950/90 px-2 backdrop-blur-xl md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 z-30 flex h-16 items-center justify-around border-t bg-background/90 px-2 backdrop-blur-xl md:hidden">
       {navItems.map((item) => {
         const Icon = item.icon;
         return (
@@ -60,11 +60,11 @@ export function MobileNav() {
             className={cn(
               "flex flex-col items-center justify-center gap-1 rounded-xl p-1.5 min-w-[56px] transition-colors",
               item.current
-                ? "text-indigo-400 font-semibold"
-                : "text-slate-400 hover:text-slate-200"
+                ? "text-foreground font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Icon className={cn("h-5 w-5", item.current && "text-indigo-400")} />
+            <Icon className={cn("h-5 w-5", item.current && "text-foreground")} />
             <span className="text-[10px] tracking-tight">{item.name}</span>
           </Link>
         );

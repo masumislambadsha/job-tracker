@@ -3,9 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { ApplicationTable } from "@/components/applications/ApplicationTable";
 import { ApplicationFilterBar } from "@/components/applications/ApplicationFilterBar";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { QuickAddModal } from "@/components/applications/QuickAddModal";
-import { TableSkeleton } from "@/components/ui/Skeleton";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { Plus, Download, RefreshCw } from "lucide-react";
 import { ApplicationItem, ApplicationStatus, PortalItem } from "@/lib/types";
 
@@ -123,8 +123,8 @@ export default function ApplicationsPage() {
       {/* Header with Title & Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Applications</h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Applications</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             Browse, filter, and inline-edit all your job applications in spreadsheet format.
           </p>
         </div>
@@ -134,23 +134,23 @@ export default function ApplicationsPage() {
             size="sm"
             variant="secondary"
             onClick={fetchData}
-            leftIcon={<RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />}
           >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
 
           <a href="/api/export" download>
-            <Button size="sm" variant="secondary" leftIcon={<Download className="h-3.5 w-3.5" />}>
+            <Button size="sm" variant="secondary">
+              <Download className="h-3.5 w-3.5" />
               Export CSV
             </Button>
           </a>
 
           <Button
             size="sm"
-            variant="primary"
             onClick={() => setIsQuickAddOpen(true)}
-            leftIcon={<Plus className="h-4 w-4" />}
           >
+            <Plus className="h-4 w-4" />
             Add Application
           </Button>
         </div>

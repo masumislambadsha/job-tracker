@@ -12,7 +12,7 @@ interface StatusHistoryTimelineProps {
 export function StatusHistoryTimeline({ history = [] }: StatusHistoryTimelineProps) {
   if (!history || history.length === 0) {
     return (
-      <div className="py-6 text-center text-xs text-slate-500 italic">
+      <div className="py-6 text-center text-xs text-muted-foreground italic">
         No status history recorded yet.
       </div>
     );
@@ -24,7 +24,7 @@ export function StatusHistoryTimeline({ history = [] }: StatusHistoryTimelinePro
   );
 
   return (
-    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-800">
+    <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
       {sorted.map((item, idx) => {
         const toConfig = getStatusConfig(item.toStatus);
         const fromConfig = item.fromStatus ? getStatusConfig(item.fromStatus) : null;
@@ -36,13 +36,13 @@ export function StatusHistoryTimeline({ history = [] }: StatusHistoryTimelinePro
             <div
               className={`absolute -left-6 top-1 flex h-5 w-5 items-center justify-center rounded-full border ${
                 isLatest
-                  ? "bg-indigo-600 border-indigo-400 text-white shadow-md shadow-indigo-500/30"
-                  : "bg-slate-900 border-slate-700 text-slate-400"
+                  ? "bg-primary border-primary text-primary-foreground shadow-sm"
+                  : "bg-card border-border text-muted-foreground"
               }`}
             >
               <div
                 className={`h-2 w-2 rounded-full ${
-                  isLatest ? "bg-white animate-ping" : "bg-slate-400"
+                  isLatest ? "bg-primary-foreground animate-ping" : "bg-muted-foreground"
                 }`}
               />
             </div>
@@ -51,8 +51,8 @@ export function StatusHistoryTimeline({ history = [] }: StatusHistoryTimelinePro
             <div
               className={`rounded-xl border p-3.5 transition-all ${
                 isLatest
-                  ? "border-indigo-500/40 bg-indigo-950/20"
-                  : "border-slate-800 bg-slate-900/60"
+                  ? "border-primary/40 bg-accent"
+                  : "border-border bg-card"
               }`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -64,7 +64,7 @@ export function StatusHistoryTimeline({ history = [] }: StatusHistoryTimelinePro
                       >
                         {fromConfig.shortLabel}
                       </span>
-                      <ArrowRight className="h-3 w-3 text-slate-500" />
+                      <ArrowRight className="h-3 w-3 text-muted-foreground" />
                     </>
                   )}
                   <span
@@ -74,14 +74,14 @@ export function StatusHistoryTimeline({ history = [] }: StatusHistoryTimelinePro
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
-                  <Clock className="h-3 w-3 text-slate-500" />
+                <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
+                  <Clock className="h-3 w-3" />
                   <span>{formatRelativeDate(item.changedAt)}</span>
                 </div>
               </div>
 
-              <div className="mt-1.5 text-[11px] text-slate-400">
-                Transition recorded on <span className="text-slate-300">{formatDate(item.changedAt, "PPP 'at' p")}</span>
+              <div className="mt-1.5 text-[11px] text-muted-foreground">
+                Transition recorded on <span className="text-foreground">{formatDate(item.changedAt, "PPP 'at' p")}</span>
               </div>
             </div>
           </div>

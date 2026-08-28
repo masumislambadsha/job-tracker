@@ -4,6 +4,15 @@ import React from "react";
 import { Search, X, ArrowUpDown } from "lucide-react";
 import { STATUS_PIPELINE, JOB_TYPE_OPTIONS, JOB_NATURE_OPTIONS } from "@/lib/constants";
 import { PortalItem } from "@/lib/types";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface FilterState {
   search: string;
@@ -39,6 +48,10 @@ export function ApplicationFilterBar({
     Boolean(filters.priority) ||
     Boolean(filters.tag);
 
+  const update = (key: keyof FilterState, value: string) => {
+    onChange({ ...filters, [key]: value === "__all" ? "" : value });
+  };
+
   const resetFilters = () => {
     onChange({
       ...filters,
@@ -53,23 +66,22 @@ export function ApplicationFilterBar({
   };
 
   return (
-    <div className="space-y-2.5 rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+    <div className="space-y-2.5 rounded-lg border bg-card p-3">
       {/* Top Row: Search + Sort controls */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
         {/* Search input */}
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500" />
-          <input
-            type="text"
+          <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
             value={filters.search}
             onChange={(e) => onChange({ ...filters, search: e.target.value })}
             placeholder="Search by company, position, notes, location..."
-            className="w-full rounded-md border border-zinc-800 bg-zinc-900 pl-8 pr-7 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-600 focus:outline-none"
+            className="pl-8 pr-7"
           />
           {filters.search && (
             <button
               onClick={() => onChange({ ...filters, search: "" })}
-              className="absolute right-2 top-2 text-zinc-500 hover:text-zinc-300"
+              className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -78,128 +90,154 @@ export function ApplicationFilterBar({
 
         {/* Sort Select */}
         <div className="flex items-center gap-1.5">
-          <select
+          <Select
             value={filters.sortBy}
-            onChange={(e) => onChange({ ...filters, sortBy: e.target.value })}
-            className="rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+            onValueChange={(v) => onChange({ ...filters, sortBy: v })}
           >
-            <option value="dateApplied">Sort: Date Applied</option>
-            <option value="company">Sort: Company</option>
-            <option value="priority">Sort: Priority</option>
-            <option value="followUpDate">Sort: Follow-up</option>
-          </select>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dateApplied">Sort: Date Applied</SelectItem>
+              <SelectItem value="company">Sort: Company</SelectItem>
+              <SelectItem value="priority">Sort: Priority</SelectItem>
+              <SelectItem value="followUpDate">Sort: Follow-up</SelectItem>
+            </SelectContent>
+          </Select>
 
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             onClick={() =>
               onChange({
                 ...filters,
                 sortOrder: filters.sortOrder === "asc" ? "desc" : "asc",
               })
             }
-            className="flex items-center justify-center h-8 w-8 rounded-md border border-zinc-800 bg-zinc-900 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
             title={`Order: ${filters.sortOrder === "asc" ? "Ascending" : "Descending"}`}
           >
             <ArrowUpDown className="h-3.5 w-3.5" />
-          </button>
+          </Button>
 
           {hasActiveFilters && (
-            <button
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={resetFilters}
-              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 px-2 py-1"
+              className="text-destructive hover:text-destructive"
             >
               <X className="h-3 w-3" />
               <span>Clear</span>
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Filter Dropdowns Row */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 pt-2 border-t border-zinc-800/80">
-        {/* Status */}
-        <select
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 pt-2 border-t">
+        <Select
           value={filters.status}
-          onChange={(e) => onChange({ ...filters, status: e.target.value })}
-          className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          onValueChange={(v) => update("status", v)}
         >
-          <option value="">All Statuses</option>
-          {STATUS_PIPELINE.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="All Statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">All Statuses</SelectItem>
+            {STATUS_PIPELINE.map((s) => (
+              <SelectItem key={s.id} value={s.id}>
+                {s.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Job Type */}
-        <select
+        <Select
           value={filters.jobType}
-          onChange={(e) => onChange({ ...filters, jobType: e.target.value })}
-          className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          onValueChange={(v) => update("jobType", v)}
         >
-          <option value="">All Workplaces</option>
-          {JOB_TYPE_OPTIONS.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="All Workplaces" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">All Workplaces</SelectItem>
+            {JOB_TYPE_OPTIONS.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Job Nature */}
-        <select
+        <Select
           value={filters.jobNature}
-          onChange={(e) => onChange({ ...filters, jobNature: e.target.value })}
-          className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          onValueChange={(v) => update("jobNature", v)}
         >
-          <option value="">All Types</option>
-          {JOB_NATURE_OPTIONS.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">All Types</SelectItem>
+            {JOB_NATURE_OPTIONS.map((n) => (
+              <SelectItem key={n.id} value={n.id}>
+                {n.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Portal */}
-        <select
+        <Select
           value={filters.portalId}
-          onChange={(e) => onChange({ ...filters, portalId: e.target.value })}
-          className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          onValueChange={(v) => update("portalId", v)}
         >
-          <option value="">All Portals</option>
-          {portals.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="All Portals" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">All Portals</SelectItem>
+            {portals.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        {/* Priority */}
-        <select
+        <Select
           value={filters.priority}
-          onChange={(e) => onChange({ ...filters, priority: e.target.value })}
-          className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          onValueChange={(v) => update("priority", v)}
         >
-          <option value="">All Priorities</option>
-          <option value="5">⭐⭐⭐⭐⭐ (5)</option>
-          <option value="4">⭐⭐⭐⭐ (4)</option>
-          <option value="3">⭐⭐⭐ (3)</option>
-          <option value="2">⭐⭐ (2)</option>
-          <option value="1">⭐ (1)</option>
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="All Priorities" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">All Priorities</SelectItem>
+            <SelectItem value="5">⭐⭐⭐⭐⭐ (5)</SelectItem>
+            <SelectItem value="4">⭐⭐⭐⭐ (4)</SelectItem>
+            <SelectItem value="3">⭐⭐⭐ (3)</SelectItem>
+            <SelectItem value="2">⭐⭐ (2)</SelectItem>
+            <SelectItem value="1">⭐ (1)</SelectItem>
+          </SelectContent>
+        </Select>
 
-        {/* Tag */}
-        <select
+        <Select
           value={filters.tag}
-          onChange={(e) => onChange({ ...filters, tag: e.target.value })}
-          className="rounded border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 focus:border-zinc-600 focus:outline-none"
+          onValueChange={(v) => update("tag", v)}
         >
-          <option value="">All Tags</option>
-          {availableTags.map((t) => (
-            <option key={t} value={t}>
-              #{t}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue placeholder="All Tags" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">All Tags</SelectItem>
+            {availableTags.map((t) => (
+              <SelectItem key={t} value={t}>
+                #{t}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

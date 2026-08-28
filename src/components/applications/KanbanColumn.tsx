@@ -27,17 +27,15 @@ export function KanbanColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col rounded-lg border transition-colors min-w-[240px] w-full flex-1 bg-zinc-900/30 p-2.5 ${
-        isOver
-          ? "border-zinc-500 bg-zinc-900/60"
-          : "border-zinc-800/80"
+      className={`flex flex-col rounded-lg border transition-colors min-w-[240px] w-full flex-1 bg-card/50 p-2.5 ${
+        isOver ? "border-primary bg-accent/60" : "border-border"
       }`}
     >
       {/* Column Header */}
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-zinc-800">
+      <div className="flex items-center justify-between pb-2 mb-2 border-b">
         <div className="flex items-center gap-1.5">
-          <h3 className="text-xs font-semibold text-zinc-300">{label}</h3>
-          <span className="rounded bg-zinc-800 px-1.5 py-0 text-[10px] font-mono text-zinc-400">
+          <h3 className="text-xs font-semibold text-foreground">{label}</h3>
+          <span className="rounded bg-secondary px-1.5 py-0 text-[10px] font-mono text-muted-foreground">
             {applications.length}
           </span>
         </div>
@@ -46,7 +44,7 @@ export function KanbanColumn({
           <button
             type="button"
             onClick={onAddClick}
-            className="rounded p-0.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+            className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             title={`Add to ${label}`}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -61,7 +59,7 @@ export function KanbanColumn({
         ))}
 
         {applications.length === 0 && (
-          <div className="flex h-16 items-center justify-center rounded border border-dashed border-zinc-800 text-center text-[11px] text-zinc-600">
+          <div className="flex h-16 items-center justify-center rounded border border-dashed border-border text-center text-[11px] text-muted-foreground">
             Empty
           </div>
         )}

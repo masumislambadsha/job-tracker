@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import { KanbanBoard } from "@/components/applications/KanbanBoard";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { QuickAddModal } from "@/components/applications/QuickAddModal";
-import { KanbanSkeleton } from "@/components/ui/Skeleton";
+import { KanbanSkeleton } from "@/components/ui/skeleton";
 import { Plus, RefreshCw, Layers } from "lucide-react";
 import { ApplicationItem, ApplicationStatus } from "@/lib/types";
 
@@ -60,11 +60,11 @@ export default function KanbanBoardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
             <Layers className="h-6 w-6 text-indigo-400" />
             <span>Application Pipeline Board</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Drag cards across pipeline stages. Status transitions and timestamps are saved automatically.
           </p>
         </div>
@@ -74,17 +74,16 @@ export default function KanbanBoardPage() {
             size="sm"
             variant="secondary"
             onClick={fetchApplications}
-            leftIcon={<RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />}
           >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
           </Button>
 
           <Button
             size="sm"
-            variant="primary"
             onClick={() => setIsQuickAddOpen(true)}
-            leftIcon={<Plus className="h-4 w-4" />}
           >
+            <Plus className="h-4 w-4" />
             Add Application
           </Button>
         </div>

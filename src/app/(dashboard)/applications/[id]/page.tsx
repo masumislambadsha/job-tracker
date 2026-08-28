@@ -3,13 +3,23 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Select } from "@/components/ui/Select";
-import { Badge } from "@/components/ui/Badge";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { StatusHistoryTimeline } from "@/components/applications/StatusHistoryTimeline";
-import { DetailPanelSkeleton } from "@/components/ui/Skeleton";
+import { DetailPanelSkeleton } from "@/components/ui/skeleton";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format, parseISO } from "date-fns";
 import {
   STATUS_PIPELINE,
   JOB_NATURE_OPTIONS,
@@ -31,15 +41,62 @@ import {
   Save,
   Trash2,
   Clock,
-  Briefcase,
   Star,
   FileText,
-  Globe2,
-  Calendar,
-  Sparkles,
   AlertCircle,
-  Tag as TagIcon,
 } from "lucide-react";
+
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className ?? "space-y-1.5"}>
+      <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  children,
+}: {
+  label?: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options?: { value: string; label: string }[];
+  placeholder?: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      {label && <Label>{label}</Label>}
+      <Select value={value} onValueChange={onValueChange}>
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options?.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+          {children}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
 
 export default function ApplicationDetailPage() {
   const params = useParams();
@@ -190,12 +247,10 @@ export default function ApplicationDetailPage() {
   if (!application) {
     return (
       <div className="text-center py-16 space-y-3">
-        <h2 className="text-lg font-bold text-white">Application Not Found</h2>
-        <p className="text-xs text-slate-400">The application may have been removed.</p>
+        <h2 className="text-lg font-bold text-foreground">Application Not Found</h2>
+        <p className="text-xs text-muted-foreground">The application may have been removed.</p>
         <Link href="/applications">
-          <Button variant="primary" size="sm">
-            Back to Applications
-          </Button>
+          <Button size="sm">Back to Applications</Button>
         </Link>
       </div>
     );
@@ -210,29 +265,30 @@ export default function ApplicationDetailPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link href="/applications">
-            <Button size="sm" variant="ghost" className="h-9 w-9 p-0 text-slate-400 hover:text-white">
+            <Button size="sm" variant="ghost" className="h-9 w-9 p-0 text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
 
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-white">{application.company}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">{application.company}</h1>
               <Badge
-                variant="primary"
+                variant="outline"
                 className={`${statusConfig.bgColor} ${statusConfig.color} ${statusConfig.borderColor} border`}
               >
                 {statusConfig.label}
               </Badge>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">{application.position}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{application.position}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
           {application.jobLink && (
             <a href={application.jobLink} target="_blank" rel="noreferrer">
-              <Button size="sm" variant="secondary" leftIcon={<ExternalLink className="h-3.5 w-3.5" />}>
+              <Button size="sm" variant="secondary">
+                <ExternalLink className="h-3.5 w-3.5" />
                 Job Posting
               </Button>
             </a>
@@ -241,21 +297,20 @@ export default function ApplicationDetailPage() {
           <Button
             size="sm"
             variant="destructive"
-            isLoading={isDeleting}
+            disabled={isDeleting}
             onClick={handleDelete}
-            leftIcon={<Trash2 className="h-3.5 w-3.5" />}
           >
-            Delete
+            <Trash2 className="h-3.5 w-3.5" />
+            {isDeleting ? "Deleting..." : "Delete"}
           </Button>
 
           <Button
             size="sm"
-            variant="primary"
-            isLoading={isSaving}
+            disabled={isSaving}
             onClick={handleSave}
-            leftIcon={<Save className="h-3.5 w-3.5" />}
           >
-            Save Changes
+            <Save className="h-3.5 w-3.5" />
+            {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </div>
@@ -266,7 +321,7 @@ export default function ApplicationDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <form onSubmit={handleSave}>
             <Card className="space-y-5">
-              <CardHeader className="pb-3 border-b border-slate-800">
+              <CardHeader className="pb-3 border-b border-border">
                 <CardTitle className="text-sm">Job Application Details</CardTitle>
                 <CardDescription>
                   Edit company, role info, linked resume variants, and follow-up milestones
@@ -276,76 +331,83 @@ export default function ApplicationDetailPage() {
               <CardContent className="space-y-4 pt-1">
                 {/* Core info */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Input
-                    label="Company Name"
-                    required
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  />
-                  <Input
-                    label="Position / Role"
-                    required
-                    value={formData.position}
-                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
-                  />
+                  <Field label="Company Name">
+                    <Input
+                      required
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Position / Role">
+                    <Input
+                      required
+                      value={formData.position}
+                      onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                    />
+                  </Field>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Input
-                    label="Date Applied"
-                    type="date"
-                    required
-                    value={formData.dateApplied}
-                    onChange={(e) => setFormData({ ...formData, dateApplied: e.target.value })}
-                  />
-                  <Select
+                  <Field label="Date Applied">
+                    <DatePicker
+                      date={formData.dateApplied ? parseISO(formData.dateApplied) : undefined}
+                      onSelect={(d) =>
+                        setFormData({
+                          ...formData,
+                          dateApplied: d ? format(d, "yyyy-MM-dd") : "",
+                        })
+                      }
+                    />
+                  </Field>
+                  <SelectField
                     label="Pipeline Status"
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    onValueChange={(v) => setFormData({ ...formData, status: v })}
                     options={STATUS_PIPELINE.map((s) => ({ value: s.id, label: s.label }))}
                   />
                 </div>
 
                 {/* Job characteristics */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  <Select
+                  <SelectField
                     label="Job Nature"
                     value={formData.jobNature}
-                    onChange={(e) => setFormData({ ...formData, jobNature: e.target.value })}
+                    onValueChange={(v) => setFormData({ ...formData, jobNature: v })}
                     options={JOB_NATURE_OPTIONS.map((j) => ({ value: j.id, label: j.label }))}
                   />
-                  <Select
+                  <SelectField
                     label="Workplace Type"
                     value={formData.jobType}
-                    onChange={(e) => setFormData({ ...formData, jobType: e.target.value })}
+                    onValueChange={(v) => setFormData({ ...formData, jobType: v })}
                     options={JOB_TYPE_OPTIONS.map((t) => ({ value: t.id, label: t.label }))}
                   />
-                  <Input
-                    label="Location"
-                    placeholder="e.g. Remote — US, Berlin"
-                    value={formData.companyLocation}
-                    onChange={(e) => setFormData({ ...formData, companyLocation: e.target.value })}
-                  />
+                  <Field label="Location">
+                    <Input
+                      placeholder="e.g. Remote — US, Berlin"
+                      value={formData.companyLocation}
+                      onChange={(e) => setFormData({ ...formData, companyLocation: e.target.value })}
+                    />
+                  </Field>
                 </div>
 
                 {/* Portal & How applied */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Select
+                  <SelectField
                     label="Source / Portal"
-                    value={formData.portalId}
-                    onChange={(e) => setFormData({ ...formData, portalId: e.target.value })}
+                    value={formData.portalId || "none"}
+                    onValueChange={(v) => setFormData({ ...formData, portalId: v === "none" ? "" : v })}
                   >
-                    <option value="">-- Direct / No Portal --</option>
+                    <SelectItem value="none">-- Direct / No Portal --</SelectItem>
                     {portals.map((p) => (
-                      <option key={p.id} value={p.id}>
+                      <SelectItem key={p.id} value={p.id}>
                         {p.name} {p.tier ? `(Tier ${p.tier})` : ""}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Select>
-                  <Select
+                  </SelectField>
+                  <SelectField
                     label="How Applied"
                     value={formData.howApplied}
-                    onChange={(e) => setFormData({ ...formData, howApplied: e.target.value })}
+                    onValueChange={(v) => setFormData({ ...formData, howApplied: v })}
                     options={HOW_APPLIED_OPTIONS.map((h) => ({ value: h, label: h }))}
                   />
                 </div>
@@ -353,18 +415,18 @@ export default function ApplicationDetailPage() {
                 {/* Resume Version & Link */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Select
+                    <SelectField
                       label="Linked Resume Version"
-                      value={formData.resumeVersionId}
-                      onChange={(e) => setFormData({ ...formData, resumeVersionId: e.target.value })}
+                      value={formData.resumeVersionId || "none"}
+                      onValueChange={(v) => setFormData({ ...formData, resumeVersionId: v === "none" ? "" : v })}
                     >
-                      <option value="">-- Select Resume Variant --</option>
+                      <SelectItem value="none">-- Select Resume Variant --</SelectItem>
                       {resumes.map((r) => (
-                        <option key={r.id} value={r.id}>
+                        <SelectItem key={r.id} value={r.id}>
                           {r.label}
-                        </option>
+                        </SelectItem>
                       ))}
-                    </Select>
+                    </SelectField>
                     {application.resumeVersion?.url && (
                       <a
                         href={`/api/resumes/${application.resumeVersion.id}/download`}
@@ -378,49 +440,52 @@ export default function ApplicationDetailPage() {
                     )}
                   </div>
 
-                  <Input
-                    label="Job Posting URL"
-                    type="url"
-                    value={formData.jobLink}
-                    onChange={(e) => setFormData({ ...formData, jobLink: e.target.value })}
-                  />
+                  <Field label="Job Posting URL">
+                    <Input
+                      type="url"
+                      value={formData.jobLink}
+                      onChange={(e) => setFormData({ ...formData, jobLink: e.target.value })}
+                    />
+                  </Field>
                 </div>
 
                 {/* Salary & Priority */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-                  <Input
-                    label="Min Salary"
-                    type="number"
-                    value={formData.salaryMin}
-                    onChange={(e) => setFormData({ ...formData, salaryMin: e.target.value })}
-                  />
-                  <Input
-                    label="Max Salary"
-                    type="number"
-                    value={formData.salaryMax}
-                    onChange={(e) => setFormData({ ...formData, salaryMax: e.target.value })}
-                  />
-                  <Select
+                  <Field label="Min Salary">
+                    <Input
+                      type="number"
+                      value={formData.salaryMin}
+                      onChange={(e) => setFormData({ ...formData, salaryMin: e.target.value })}
+                    />
+                  </Field>
+                  <Field label="Max Salary">
+                    <Input
+                      type="number"
+                      value={formData.salaryMax}
+                      onChange={(e) => setFormData({ ...formData, salaryMax: e.target.value })}
+                    />
+                  </Field>
+                  <SelectField
                     label="Currency"
                     value={formData.currency}
-                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                    onValueChange={(v) => setFormData({ ...formData, currency: v })}
                     options={CURRENCIES.map((c) => ({ value: c, label: c }))}
                   />
                   <div className="space-y-1.5">
-                    <label className="block text-xs font-medium text-slate-300">Priority Rating</label>
-                    <div className="flex items-center gap-1 h-10 px-2 rounded-xl bg-slate-900/80 border border-slate-800">
+                    <Label>Priority Rating</Label>
+                    <div className="flex items-center gap-1 h-10 px-2 rounded-xl bg-background border border-border">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
                           type="button"
                           onClick={() => setFormData({ ...formData, priority: star })}
-                          className="p-0.5 text-slate-600 hover:text-amber-400"
+                          className="p-0.5 text-muted-foreground hover:text-amber-400"
                         >
                           <Star
                             className={`h-4 w-4 ${
                               star <= formData.priority
                                 ? "fill-amber-400 text-amber-400"
-                                : "text-slate-700"
+                                : "text-muted-foreground/50"
                             }`}
                           />
                         </button>
@@ -432,38 +497,43 @@ export default function ApplicationDetailPage() {
                 {/* Follow-up reminder & Tags */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1">
-                    <Input
-                      label="Next Follow-up Reminder Date"
-                      type="date"
-                      value={formData.followUpDate}
-                      onChange={(e) => setFormData({ ...formData, followUpDate: e.target.value })}
-                    />
+                    <Field label="Next Follow-up Reminder Date">
+                      <DatePicker
+                        date={formData.followUpDate ? parseISO(formData.followUpDate) : undefined}
+                        onSelect={(d) =>
+                          setFormData({
+                            ...formData,
+                            followUpDate: d ? format(d, "yyyy-MM-dd") : "",
+                          })
+                        }
+                      />
+                    </Field>
                     {isOverdue && (
-                      <p className="text-[11px] font-semibold text-rose-400 flex items-center gap-1">
+                      <p className="text-[11px] font-semibold text-destructive flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" />
                         <span>This follow-up is overdue!</span>
                       </p>
                     )}
                   </div>
-                  <Input
-                    label="Tags (comma-separated)"
-                    placeholder="dream-company, high-salary"
-                    value={formData.tags}
-                    onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                  />
+                  <Field label="Tags (comma-separated)">
+                    <Input
+                      placeholder="dream-company, high-salary"
+                      value={formData.tags}
+                      onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                    />
+                  </Field>
                 </div>
 
                 {/* Notes & Comments */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-slate-300">
+                  <Label>
                     Interview Notes / Recruiter Contacts / Freeform Comments
-                  </label>
-                  <textarea
+                  </Label>
+                  <Textarea
                     rows={4}
                     value={formData.comments}
                     onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
                     placeholder="Take notes on recruiter conversations, tech stack questions, compensation negotiations..."
-                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               </CardContent>
@@ -474,7 +544,7 @@ export default function ApplicationDetailPage() {
         {/* Status History Timeline Column (1 Col) */}
         <div className="space-y-6">
           <Card className="h-full">
-            <CardHeader className="pb-3 border-b border-slate-800">
+            <CardHeader className="pb-3 border-b border-border">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Clock className="h-4 w-4 text-indigo-400" />
                 <span>Status History Timeline</span>

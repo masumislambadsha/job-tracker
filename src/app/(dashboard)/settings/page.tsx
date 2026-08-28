@@ -23,6 +23,8 @@ import {
   Sparkles,
   CheckCircle2,
   Shield,
+  Table2,
+  ExternalLink,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -34,6 +36,9 @@ export default function SettingsPage() {
   const [isSeeding, setIsSeeding] = useState(false);
   const [seedMessage, setSeedMessage] = useState("");
   const [isSavingPref, setIsSavingPref] = useState(false);
+
+  const googleSheetsUrl =
+    "https://docs.google.com/spreadsheets/d/1B9piE060t6s0IBAhqLlboixDEi8APjyqtBk1nVnxwMU/edit";
 
   const handleSavePreferences = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +125,28 @@ export default function SettingsPage() {
                 >
                   <Download className="h-3.5 w-3.5" />
                   Download CSV
+                </Button>
+              </a>
+            </div>
+
+            {/* Live Google Sheet */}
+            <div className="p-4 rounded-xl bg-background border border-border space-y-2 flex flex-col justify-between">
+              <div>
+                <span className="text-xs font-bold text-foreground block">Live Google Sheet</span>
+                <p className="text-[11px] text-muted-foreground leading-relaxed mt-1">
+                  New applications sync here automatically. Open the sheet to view all entries in one place.
+                </p>
+              </div>
+              <a
+                href={googleSheetsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-2 block"
+              >
+                <Button variant="secondary" size="sm" className="w-full">
+                  <Table2 className="h-3.5 w-3.5" />
+                  Open Google Sheet
+                  <ExternalLink className="h-3 w-3 ml-1 opacity-70" />
                 </Button>
               </a>
             </div>

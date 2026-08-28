@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { baseUrlFromOrigin } from "@/lib/oauth";
 
 export async function GET(request: Request) {
-  const origin = request.headers.get("origin") || request.headers.get("referer") || undefined;
-  const base = baseUrlFromOrigin(origin);
+  const base = new URL(request.url).origin;
 
   const metadata = {
     issuer: base,

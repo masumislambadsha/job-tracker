@@ -8,6 +8,7 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
 import { isMcpAuthorized, mcpCorsHeaders, getMcpToken } from "@/lib/mcp-token";
 import { isOAuthAccessToken } from "@/lib/oauth";
+import { appendApplication } from "@/lib/google-sheets";
 
 // ─── Helper: get user ID ──────────────────────────────────────────────────────
 async function getUserId(request: NextRequest): Promise<string> {
@@ -124,6 +125,11 @@ function createMcpServer() {
         statusHistory: { create: { fromStatus: null, toStatus: args.status, changedAt: new Date() } },
       },
     });
+    try {
+      await appendApplication(app);
+    } catch (err) {
+      console.error("[Sheets Sync] Background error:", (err as Error).message);
+    }
     return { content: [{ type: "text" as const, text: `✅ Created: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})` }] };
   });
 

@@ -12,7 +12,6 @@ import { ApplicationItem, ApplicationStatus, PortalItem } from "@/lib/types";
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [portals, setPortals] = useState<PortalItem[]>([]);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -24,8 +23,8 @@ export default function ApplicationsPage() {
     jobType: "",
     jobNature: "",
     portalId: "",
-    priority: "",
-    tag: "",
+    dateFrom: "",
+    dateTo: "",
     sortBy: "dateApplied",
     sortOrder: "desc" as "asc" | "desc",
   });
@@ -40,26 +39,23 @@ export default function ApplicationsPage() {
       if (filters.jobType) params.set("jobType", filters.jobType);
       if (filters.jobNature) params.set("jobNature", filters.jobNature);
       if (filters.portalId) params.set("portalId", filters.portalId);
-      if (filters.priority) params.set("priority", filters.priority);
-      if (filters.tag) params.set("tag", filters.tag);
+      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+      if (filters.dateTo) params.set("dateTo", filters.dateTo);
       params.set("sortBy", filters.sortBy);
       params.set("sortOrder", filters.sortOrder);
 
-      const [appsRes, portalsRes, tagsRes] = await Promise.all([
+      const [appsRes, portalsRes] = await Promise.all([
         fetch(`/api/applications?${params.toString()}`),
         fetch("/api/portals"),
-        fetch("/api/tags"),
       ]);
 
-      const [appsData, portalsData, tagsData] = await Promise.all([
+      const [appsData, portalsData] = await Promise.all([
         appsRes.json(),
         portalsRes.json(),
-        tagsRes.json(),
       ]);
 
       if (Array.isArray(appsData)) setApplications(appsData);
       if (Array.isArray(portalsData)) setPortals(portalsData);
-      if (Array.isArray(tagsData)) setAvailableTags(tagsData.map((t: any) => t.name));
     } catch (err) {
       console.error("Error fetching table data:", err);
     } finally {
@@ -123,7 +119,15 @@ export default function ApplicationsPage() {
       {/* Header with Title & Action Buttons */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Applications</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Applications</h1>
+            <span
+              className="inline-flex items-center rounded-full border bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground tabular-nums"
+              title="Applications matching current filters"
+            >
+              {hasLoaded ? applications.length : "…"}
+            </span>
+          </div>
           <p className="text-xs text-muted-foreground mt-1">
             Browse, filter, and inline-edit all your job applications in spreadsheet format.
           </p>
@@ -161,7 +165,6 @@ export default function ApplicationsPage() {
         filters={filters}
         onChange={setFilters}
         portals={portals}
-        availableTags={availableTags}
       />
 
       {/* Table Content */}

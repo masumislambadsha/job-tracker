@@ -1,11 +1,19 @@
 "use client";
 
 import React from "react";
-import { Search, X, ArrowUpDown } from "lucide-react";
+import { format } from "date-fns";
+import { Search, X, ArrowUpDown, CalendarIcon } from "lucide-react";
+import { type DateRange } from "react-day-picker";
 import { STATUS_PIPELINE, JOB_TYPE_OPTIONS, JOB_NATURE_OPTIONS } from "@/lib/constants";
 import { PortalItem } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -20,8 +28,8 @@ interface FilterState {
   jobType: string;
   jobNature: string;
   portalId: string;
-  priority: string;
-  tag: string;
+  dateFrom: string;
+  dateTo: string;
   sortBy: string;
   sortOrder: "asc" | "desc";
 }
@@ -30,14 +38,12 @@ interface ApplicationFilterBarProps {
   filters: FilterState;
   onChange: (filters: FilterState) => void;
   portals: PortalItem[];
-  availableTags: string[];
 }
 
 export function ApplicationFilterBar({
   filters,
   onChange,
   portals,
-  availableTags,
 }: ApplicationFilterBarProps) {
   const hasActiveFilters =
     Boolean(filters.search) ||
@@ -45,8 +51,8 @@ export function ApplicationFilterBar({
     Boolean(filters.jobType) ||
     Boolean(filters.jobNature) ||
     Boolean(filters.portalId) ||
-    Boolean(filters.priority) ||
-    Boolean(filters.tag);
+    Boolean(filters.dateFrom) ||
+    Boolean(filters.dateTo);
 
   const update = (key: keyof FilterState, value: string) => {
     onChange({ ...filters, [key]: value === "__all" ? "" : value });
@@ -60,8 +66,23 @@ export function ApplicationFilterBar({
       jobType: "",
       jobNature: "",
       portalId: "",
-      priority: "",
-      tag: "",
+      dateFrom: "",
+      dateTo: "",
+    });
+  };
+
+  const dateRange: DateRange | undefined =
+    filters.dateFrom && filters.dateTo
+      ? { from: new Date(filters.dateFrom), to: new Date(filters.dateTo) }
+      : filters.dateFrom
+        ? { from: new Date(filters.dateFrom) }
+        : undefined;
+
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    onChange({
+      ...filters,
+      dateFrom: range?.from ? format(range.from, "yyyy-MM-dd") : "",
+      dateTo: range?.to ? format(range.to, "yyyy-MM-dd") : "",
     });
   };
 
@@ -136,7 +157,7 @@ export function ApplicationFilterBar({
       </div>
 
       {/* Filter Dropdowns Row */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 pt-2 border-t">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 pt-2 border-t">
         <Select
           value={filters.status}
           onValueChange={(v) => update("status", v)}
@@ -205,39 +226,38 @@ export function ApplicationFilterBar({
           </SelectContent>
         </Select>
 
-        <Select
-          value={filters.priority}
-          onValueChange={(v) => update("priority", v)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="All Priorities" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all">All Priorities</SelectItem>
-            <SelectItem value="5">⭐⭐⭐⭐⭐ (5)</SelectItem>
-            <SelectItem value="4">⭐⭐⭐⭐ (4)</SelectItem>
-            <SelectItem value="3">⭐⭐⭐ (3)</SelectItem>
-            <SelectItem value="2">⭐⭐ (2)</SelectItem>
-            <SelectItem value="1">⭐ (1)</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.tag}
-          onValueChange={(v) => update("tag", v)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="All Tags" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all">All Tags</SelectItem>
-            {availableTags.map((t) => (
-              <SelectItem key={t} value={t}>
-                #{t}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              id="date-range"
+              variant="outline"
+              className="justify-start text-left font-normal w-full data-[empty=true]:text-muted-foreground"
+              data-empty={!dateRange?.from}
+            >
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+              {dateRange?.from ? (
+                dateRange.to ? (
+                  <>
+                    {format(dateRange.from, "MMM d")} -{" "}
+                    {format(dateRange.to, "MMM d, yyyy")}
+                  </>
+                ) : (
+                  format(dateRange.from, "MMM d, yyyy")
+                )
+              ) : (
+                <span className="truncate">Date Applied</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={handleDateRangeChange}
+              numberOfMonths={2}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

@@ -17,8 +17,8 @@ export async function GET(request: Request) {
     const jobNature = searchParams.get("jobNature");
     const portalId = searchParams.get("portalId");
     const resumeVersionId = searchParams.get("resumeVersionId");
-    const priority = searchParams.get("priority");
-    const tag = searchParams.get("tag");
+    const dateFrom = searchParams.get("dateFrom");
+    const dateTo = searchParams.get("dateTo");
     const sortBy = searchParams.get("sortBy") || "dateApplied";
     const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
 
@@ -41,9 +41,6 @@ export async function GET(request: Request) {
     if (resumeVersionId) {
       where.resumeVersionId = resumeVersionId;
     }
-    if (priority) {
-      where.priority = Number(priority);
-    }
 
     if (search) {
       where.OR = [
@@ -54,14 +51,14 @@ export async function GET(request: Request) {
       ];
     }
 
-    if (tag) {
-      where.tags = {
-        some: {
-          tag: {
-            name: tag,
-          },
-        },
-      };
+    if (dateFrom || dateTo) {
+      where.dateApplied = {};
+      if (dateFrom) {
+        where.dateApplied.gte = new Date(`${dateFrom}T00:00:00.000Z`);
+      }
+      if (dateTo) {
+        where.dateApplied.lte = new Date(`${dateTo}T23:59:59.999Z`);
+      }
     }
 
     const orderBy: any = {};

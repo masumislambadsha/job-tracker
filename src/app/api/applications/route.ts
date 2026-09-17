@@ -3,6 +3,46 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
 import { appendApplication } from "@/lib/google-sheets";
 
+const APPLICATION_LIST_SELECT = {
+  id: true,
+  userId: true,
+  company: true,
+  position: true,
+  dateApplied: true,
+  status: true,
+  jobNature: true,
+  jobType: true,
+  companyLocation: true,
+  jobLink: true,
+  portalId: true,
+  howApplied: true,
+  resumeVersionId: true,
+  salaryMin: true,
+  salaryMax: true,
+  currency: true,
+  priority: true,
+  followUpDate: true,
+  createdAt: true,
+  updatedAt: true,
+  portal: {
+    select: { id: true, name: true, url: true, tier: true },
+  },
+  resumeVersion: {
+    select: { id: true, label: true, url: true },
+  },
+} as const;
+
+const SORTABLE_FIELDS = new Set([
+  "company",
+  "position",
+  "status",
+  "priority",
+  "followUpDate",
+  "dateApplied",
+]);
+
+const SORT_DIRECTIONS = new Set(["asc", "desc"]);
+
 export async function GET(request: Request) {
   try {
     let user = await getCurrentUser();
@@ -17,10 +57,20 @@ export async function GET(request: Request) {
     const jobNature = searchParams.get("jobNature");
     const portalId = searchParams.get("portalId");
     const resumeVersionId = searchParams.get("resumeVersionId");
+    const hasFollowUp = searchParams.get("hasFollowUp") === "true";
     const dateFrom = searchParams.get("dateFrom");
     const dateTo = searchParams.get("dateTo");
-    const sortBy = searchParams.get("sortBy") || "dateApplied";
-    const sortOrder = searchParams.get("sortOrder") === "asc" ? "asc" : "desc";
+    const sortBy = SORTABLE_FIELDS.has(searchParams.get("sortBy") || "")
+      ? (searchParams.get("sortBy") as string)
+      : "dateApplied";
+    const sortOrder = SORT_DIRECTIONS.has(searchParams.get("sortOrder") || "")
+      ? (searchParams.get("sortOrder") as "asc" | "desc")
+      : "desc";
+    const cursor = searchParams.get("cursor");
+    const requestedPageSize = Number(searchParams.get("pageSize"));
+    const pageSize = Number.isFinite(requestedPageSize) && requestedPageSize > 0
+      ? Math.min(requestedPageSize, 200)
+      : 50;
 
     const where: any = {
       userId: user.id,
@@ -42,6 +92,10 @@ export async function GET(request: Request) {
       where.resumeVersionId = resumeVersionId;
     }
 
+    if (hasFollowUp) {
+      where.followUpDate = { not: null };
+    }
+
     if (search) {
       where.OR = [
         { company: { contains: search, mode: "insensitive" } },
@@ -61,35 +115,30 @@ export async function GET(request: Request) {
       }
     }
 
-    const orderBy: any = {};
-    if (sortBy === "company" || sortBy === "position" || sortBy === "status" || sortBy === "priority" || sortBy === "followUpDate") {
-      orderBy[sortBy] = sortOrder;
-    } else {
-      orderBy.dateApplied = sortOrder;
-    }
+    // Keyset pagination: id is the unique tiebreaker so ordering is stable
+    // even when the selected sort field contains ties.
+    const orderBy = [{ [sortBy]: sortOrder }, { id: sortOrder }];
 
-    const applications = await prisma.application.findMany({
-      where,
-      orderBy,
-      include: {
-        portal: {
-          select: { id: true, name: true, url: true, tier: true },
-        },
-        resumeVersion: {
-          select: { id: true, label: true, url: true },
-        },
-        tags: {
-          include: {
-            tag: true,
-          },
-        },
-        statusHistory: {
-          orderBy: { changedAt: "desc" },
-        },
-      },
+    const [total, applications] = await Promise.all([
+      prisma.application.count({ where }),
+      prisma.application.findMany({
+        where,
+        orderBy,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        take: pageSize,
+        select: APPLICATION_LIST_SELECT,
+      }),
+    ]);
+
+    const last = applications[applications.length - 1];
+    const nextCursor = applications.length === pageSize && last ? last.id : null;
+
+    return NextResponse.json({
+      data: applications,
+      total,
+      nextCursor,
+      pageSize,
     });
-
-    return NextResponse.json(applications);
   } catch (error) {
     console.error("Applications GET error:", error);
     return NextResponse.json(

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { ApplicationTable } from "@/components/applications/ApplicationTable";
 import { ApplicationFilterBar } from "@/components/applications/ApplicationFilterBar";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,27 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { Plus, Download, RefreshCw } from "lucide-react";
 import { ApplicationItem, ApplicationStatus, PortalItem } from "@/lib/types";
 
+const PAGE_SIZE = 20;
+
+function useDebouncedValue<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [portals, setPortals] = useState<PortalItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
@@ -29,45 +45,79 @@ export default function ApplicationsPage() {
     sortOrder: "desc" as "asc" | "desc",
   });
 
-  const fetchData = async () => {
-    try {
-      setIsRefreshing(true);
-      if (!hasLoaded) setIsLoading(true);
-      const params = new URLSearchParams();
-      if (filters.search) params.set("search", filters.search);
-      if (filters.status) params.set("status", filters.status);
-      if (filters.jobType) params.set("jobType", filters.jobType);
-      if (filters.jobNature) params.set("jobNature", filters.jobNature);
-      if (filters.portalId) params.set("portalId", filters.portalId);
-      if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
-      if (filters.dateTo) params.set("dateTo", filters.dateTo);
-      params.set("sortBy", filters.sortBy);
-      params.set("sortOrder", filters.sortOrder);
+  const debouncedSearch = useDebouncedValue(filters.search, 300);
+  const effectiveFilters = { ...filters, search: debouncedSearch };
 
-      const [appsRes, portalsRes] = await Promise.all([
-        fetch(`/api/applications?${params.toString()}`),
-        fetch("/api/portals"),
-      ]);
+  const filtersRef = useRef(effectiveFilters);
+  filtersRef.current = effectiveFilters;
+  const hasLoadedRef = useRef(false);
+  hasLoadedRef.current = hasLoaded;
 
-      const [appsData, portalsData] = await Promise.all([
-        appsRes.json(),
-        portalsRes.json(),
-      ]);
+  const fetchData = useCallback(
+    async (cursor?: string, isRefresh = false) => {
+      try {
+        if (isRefresh) {
+          setIsRefreshing(true);
+        } else if (!hasLoadedRef.current) {
+          setIsLoading(true);
+        } else if (cursor) {
+          setIsLoadingMore(true);
+        }
 
-      if (Array.isArray(appsData)) setApplications(appsData);
-      if (Array.isArray(portalsData)) setPortals(portalsData);
-    } catch (err) {
-      console.error("Error fetching table data:", err);
-    } finally {
-      setHasLoaded(true);
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
+        const f = filtersRef.current;
+        const params = new URLSearchParams();
+        if (f.search) params.set("search", f.search);
+        if (f.status) params.set("status", f.status);
+        if (f.jobType) params.set("jobType", f.jobType);
+        if (f.jobNature) params.set("jobNature", f.jobNature);
+        if (f.portalId) params.set("portalId", f.portalId);
+        if (f.dateFrom) params.set("dateFrom", f.dateFrom);
+        if (f.dateTo) params.set("dateTo", f.dateTo);
+        params.set("sortBy", f.sortBy);
+        params.set("sortOrder", f.sortOrder);
+        params.set("pageSize", String(PAGE_SIZE));
+        if (cursor) params.set("cursor", cursor);
+
+        const [appsRes, portalsRes] = await Promise.all([
+          fetch(`/api/applications?${params.toString()}`),
+          fetch("/api/portals"),
+        ]);
+
+        const [appsData, portalsData] = await Promise.all([
+          appsRes.json(),
+          portalsRes.json(),
+        ]);
+
+        if (appsData && Array.isArray(appsData.data)) {
+          setTotal(appsData.total ?? 0);
+          setNextCursor(appsData.nextCursor ?? null);
+          setApplications((prev) =>
+            cursor ? prev.concat(appsData.data) : appsData.data
+          );
+        }
+        if (Array.isArray(portalsData)) setPortals(portalsData);
+      } catch (err) {
+        console.error("Error fetching table data:", err);
+      } finally {
+        setHasLoaded(true);
+        setIsLoading(false);
+        setIsRefreshing(false);
+        setIsLoadingMore(false);
+      }
+    },
+    []
+  );
+
+  const filtersKey = JSON.stringify(effectiveFilters);
+  const lastFiltersKey = useRef<string | null>(null);
 
   useEffect(() => {
+    if (lastFiltersKey.current === filtersKey) return;
+    lastFiltersKey.current = filtersKey;
+    setNextCursor(null);
+    setApplications([]);
     fetchData();
-  }, [filters]);
+  }, [filtersKey, fetchData]);
 
   const handleStatusChange = async (id: string, newStatus: ApplicationStatus) => {
     // Optimistic UI update
@@ -106,11 +156,21 @@ export default function ApplicationsPage() {
 
   const handleDelete = async (id: string) => {
     setApplications((prev) => prev.filter((app) => app.id !== id));
+    // If the last visible row was deleted but more rows exist, backfill.
+    if (applications.length === 1 && nextCursor) {
+      fetchData(nextCursor);
+    }
     try {
       await fetch(`/api/applications/${id}`, { method: "DELETE" });
     } catch (err) {
       console.error("Delete error:", err);
       fetchData();
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (nextCursor && !isLoadingMore) {
+      fetchData(nextCursor);
     }
   };
 
@@ -125,7 +185,7 @@ export default function ApplicationsPage() {
               className="inline-flex items-center rounded-full border bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground tabular-nums"
               title="Applications matching current filters"
             >
-              {hasLoaded ? applications.length : "…"}
+              {hasLoaded ? total : "…"}
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
@@ -137,7 +197,7 @@ export default function ApplicationsPage() {
           <Button
             size="sm"
             variant="secondary"
-            onClick={fetchData}
+            onClick={() => fetchData(undefined, true)}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh
@@ -174,6 +234,10 @@ export default function ApplicationsPage() {
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}
           onPriorityChange={handlePriorityChange}
+          onLoadMore={handleLoadMore}
+          hasMore={Boolean(nextCursor)}
+          isLoadingMore={isLoadingMore}
+          total={total}
         />
       ) : (
         <TableSkeleton />
@@ -183,7 +247,7 @@ export default function ApplicationsPage() {
       <QuickAddModal
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
-        onSuccess={() => fetchData()}
+        onSuccess={() => fetchData(undefined, true)}
       />
     </div>
   );

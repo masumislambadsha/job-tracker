@@ -42,6 +42,10 @@ interface ApplicationTableProps {
   onDelete?: (id: string) => void;
   onStatusChange?: (id: string, newStatus: ApplicationStatus) => void;
   onPriorityChange?: (id: string, newPriority: number) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  total?: number;
 }
 
 export function ApplicationTable({
@@ -49,6 +53,10 @@ export function ApplicationTable({
   onDelete,
   onStatusChange,
   onPriorityChange,
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
+  total,
 }: ApplicationTableProps) {
   const router = useRouter();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -269,6 +277,25 @@ export function ApplicationTable({
           })}
         </TableBody>
       </Table>
+
+      {(hasMore || total !== undefined) && (
+        <div className="flex items-center justify-between gap-3 border-t bg-muted/30 px-4 py-2.5">
+          <p className="text-xs text-muted-foreground tabular-nums">
+            Showing {applications.length}
+            {total !== undefined ? ` of ${total}` : ""}
+          </p>
+          {hasMore && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onLoadMore}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? "Loading..." : "Load more"}
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

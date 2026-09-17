@@ -7,6 +7,7 @@ import { QuickAddModal } from "@/components/applications/QuickAddModal";
 import { CalendarSkeleton } from "@/components/ui/skeleton";
 import { Plus, RefreshCw, CalendarDays } from "lucide-react";
 import { ApplicationItem } from "@/lib/types";
+import { fetchAllApplications } from "@/lib/fetch-applications";
 
 export default function CalendarPage() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
@@ -19,11 +20,10 @@ export default function CalendarPage() {
     try {
       setIsRefreshing(true);
       if (!hasLoaded) setIsLoading(true);
-      const res = await fetch("/api/applications");
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setApplications(data);
-      }
+      const data = await fetchAllApplications({
+        params: { hasFollowUp: "true" },
+      });
+      setApplications(data);
     } catch (err) {
       console.error("Error fetching applications for calendar:", err);
     } finally {

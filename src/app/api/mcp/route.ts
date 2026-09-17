@@ -27,35 +27,49 @@ function createMcpServer() {
   // ── get_dashboard_stats ───────────────────────────────────────────────────
   server.tool("get_dashboard_stats", "Get live KPI metrics: total applications, active pipeline, interviews, offers, response rate, overdue follow-ups.", {}, async () => {
     const userId = await getOrCreateDefaultUser().then(u => u.id);
-    const apps = await prisma.application.findMany({
-      where: { userId },
-      include: { statusHistory: { orderBy: { changedAt: "asc" } } },
-    });
+    const TERMINAL = ["REJECTED", "GHOSTED", "WITHDRAWN"];
+    const RESPONSE = ["OA_ASSESSMENT", "INTERVIEW_SCHEDULED", "INTERVIEW_COMPLETED", "OFFER", "REJECTED"];
 
-    const total = apps.length;
-    const active = apps.filter(a => !["REJECTED", "GHOSTED", "WITHDRAWN"].includes(a.status)).length;
-    const interviews = apps.filter(a => ["INTERVIEW_SCHEDULED", "INTERVIEW_COMPLETED", "OFFER"].includes(a.status)).length;
-    const offers = apps.filter(a => a.status === "OFFER").length;
-    const applied = apps.filter(a => a.status !== "WISHLIST").length;
-    const responses = apps.filter(a => ["OA_ASSESSMENT","INTERVIEW_SCHEDULED","INTERVIEW_COMPLETED","OFFER","REJECTED"].includes(a.status)).length;
+    const [total, active, interviews, offers, applied, responses] = await Promise.all([
+      prisma.application.count({ where: { userId } }),
+      prisma.application.count({ where: { userId, status: { notIn: TERMINAL } } }),
+      prisma.application.count({ where: { userId, status: { in: ["INTERVIEW_SCHEDULED", "INTERVIEW_COMPLETED", "OFFER"] } } }),
+      prisma.application.count({ where: { userId, status: "OFFER" } }),
+      prisma.application.count({ where: { userId, status: { not: "WISHLIST" } } }),
+      prisma.application.count({ where: { userId, status: { in: RESPONSE } } }),
+    ]);
     const responseRate = applied > 0 ? Math.round((responses / applied) * 100) : 0;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const next7 = new Date(today.getTime() + 7 * 86400000);
+    const FOLLOW_UP_SELECT = { company: true, position: true, status: true, followUpDate: true } as const;
 
-    const overdue = apps
-      .filter(a => a.followUpDate && new Date(a.followUpDate) < today && !["REJECTED","GHOSTED","WITHDRAWN","OFFER"].includes(a.status))
-      .map(a => ({ company: a.company, position: a.position, status: a.status, due: a.followUpDate }));
-
-    const upcoming = apps
-      .filter(a => a.followUpDate && new Date(a.followUpDate) >= today && new Date(a.followUpDate) <= next7 && !["REJECTED","GHOSTED","WITHDRAWN","OFFER"].includes(a.status))
-      .map(a => ({ company: a.company, position: a.position, status: a.status, due: a.followUpDate }));
+    const [overdue, upcoming] = await Promise.all([
+      prisma.application.findMany({
+        where: { userId, followUpDate: { not: null, lt: today }, status: { notIn: [...TERMINAL, "OFFER"] } },
+        orderBy: [{ followUpDate: "asc" }, { id: "asc" }],
+        select: FOLLOW_UP_SELECT,
+      }),
+      prisma.application.findMany({
+        where: { userId, followUpDate: { not: null, gte: today, lte: next7 }, status: { notIn: [...TERMINAL, "OFFER"] } },
+        orderBy: [{ followUpDate: "asc" }, { id: "asc" }],
+        select: FOLLOW_UP_SELECT,
+      }),
+    ]);
 
     return {
       content: [{
         type: "text" as const,
-        text: JSON.stringify({ total_applications: total, active_pipeline: active, interviews, offers, response_rate_pct: responseRate, overdue_follow_ups: overdue, upcoming_follow_ups: upcoming }, null, 2),
+        text: JSON.stringify({
+          total_applications: total,
+          active_pipeline: active,
+          interviews,
+          offers,
+          response_rate_pct: responseRate,
+          overdue_follow_ups: overdue.map(a => ({ company: a.company, position: a.position, status: a.status, due: a.followUpDate })),
+          upcoming_follow_ups: upcoming.map(a => ({ company: a.company, position: a.position, status: a.status, due: a.followUpDate })),
+        }, null, 2),
       }],
     };
   });

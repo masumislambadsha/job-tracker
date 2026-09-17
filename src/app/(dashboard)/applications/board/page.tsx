@@ -7,6 +7,7 @@ import { QuickAddModal } from "@/components/applications/QuickAddModal";
 import { KanbanSkeleton } from "@/components/ui/skeleton";
 import { Plus, RefreshCw, Layers } from "lucide-react";
 import { ApplicationItem, ApplicationStatus } from "@/lib/types";
+import { fetchAllApplications } from "@/lib/fetch-applications";
 
 export default function KanbanBoardPage() {
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
@@ -19,11 +20,10 @@ export default function KanbanBoardPage() {
     try {
       setIsRefreshing(true);
       if (!hasLoaded) setIsLoading(true);
-      const res = await fetch("/api/applications?sortBy=dateApplied&sortOrder=desc");
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setApplications(data);
-      }
+      const data = await fetchAllApplications({
+        params: { sortBy: "dateApplied", sortOrder: "desc" },
+      });
+      setApplications(data);
     } catch (err) {
       console.error("Error fetching applications for Kanban:", err);
     } finally {

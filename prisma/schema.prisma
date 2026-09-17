@@ -49,6 +49,12 @@ model Application {
 
   @@index([userId, status])
   @@index([userId, followUpDate])
+  @@index([userId, dateApplied(sort: Desc)])
+  @@index([userId, status, dateApplied(sort: Desc)])
+  @@index([userId, portalId])
+  @@index([userId, resumeVersionId])
+  @@index([userId, jobType])
+  @@index([userId, jobNature])
 }
 
 model StatusHistory {
@@ -58,6 +64,8 @@ model StatusHistory {
   fromStatus    String?
   toStatus      String
   changedAt     DateTime    @default(now())
+
+  @@index([applicationId, changedAt(sort: Desc)])
 }
 
 model Portal {
@@ -70,6 +78,8 @@ model Portal {
   notes         String?
   lastCheckedAt DateTime?
   applications  Application[]
+
+  @@index([userId])
 }
 
 model ResumeVersion {
@@ -80,6 +90,8 @@ model ResumeVersion {
   url          String
   createdAt    DateTime      @default(now())
   applications Application[]
+
+  @@index([userId])
 }
 
 model Tag {
@@ -89,6 +101,8 @@ model Tag {
   name         String
   color        String?
   applications ApplicationTag[]
+
+  @@index([userId, name])
 }
 
 model ApplicationTag {
@@ -97,4 +111,7 @@ model ApplicationTag {
   tagId         String      @db.ObjectId
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   tag           Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([tagId])
 }

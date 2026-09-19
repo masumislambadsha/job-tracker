@@ -6,6 +6,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
+import { normalizeJobLink } from "@/lib/job-link";
 import { isMcpAuthorized, mcpCorsHeaders, getMcpToken } from "@/lib/mcp-token";
 import { isOAuthAccessToken } from "@/lib/oauth";
 import { appendApplication } from "@/lib/google-sheets";
@@ -100,6 +101,7 @@ function createMcpServer() {
         text: JSON.stringify(apps.map(a => ({
           id: a.id, company: a.company, position: a.position, status: a.status,
           date_applied: a.dateApplied, priority: a.priority, follow_up: a.followUpDate,
+          job_link: a.jobLink,
           portal: a.portal?.name ?? null, resume: a.resumeVersion?.label ?? null,
           tags: a.tags.map(t => t.tag.name), salary: a.salaryMin ? `${a.currency} ${a.salaryMin}–${a.salaryMax}` : null,
           comments: a.comments,
@@ -109,7 +111,7 @@ function createMcpServer() {
   });
 
   // ── add_application ───────────────────────────────────────────────────────
-  server.tool("add_application", "Add a new job application to the pipeline.", {
+  server.tool("add_application", "Add a new job application to the pipeline. You MUST always provide job_link: use the real job posting URL if the user gave one; if no link was provided, you MUST generate a placeholder from the company and role, e.g. company 'Zayson' + position 'Full Stack Developer' -> 'https://zayson.com/careers/full-stack-developer'. Never omit job_link or store null.", {
     company: z.string(),
     position: z.string(),
     status: z.enum(["WISHLIST","APPLIED","OA_ASSESSMENT","INTERVIEW_SCHEDULED","INTERVIEW_COMPLETED","OFFER","REJECTED","GHOSTED","WITHDRAWN"]).default("APPLIED"),
@@ -117,7 +119,7 @@ function createMcpServer() {
     job_type: z.enum(["REMOTE","HYBRID","ONSITE"]).optional(),
     job_nature: z.enum(["FULL_TIME","PART_TIME","CONTRACT","FREELANCE","INTERNSHIP"]).optional(),
     company_location: z.string().optional(),
-    job_link: z.string().optional(),
+    job_link: z.string().optional().describe("REQUIRED: real job posting URL if known; otherwise generate placeholder https://{company-slug}.com/careers/{position-slug} (e.g. https://zayson.com/careers/full-stack-developer). Never leave blank."),
     salary_min: z.number().optional(),
     salary_max: z.number().optional(),
     currency: z.string().default("USD"),
@@ -126,12 +128,13 @@ function createMcpServer() {
     comments: z.string().optional(),
   }, async (args) => {
     const userId = await getOrCreateDefaultUser().then(u => u.id);
+    const { url: finalJobLink, usedPlaceholder } = normalizeJobLink(args.job_link, args.company, args.position);
     const app = await prisma.application.create({
       data: {
         userId, company: args.company, position: args.position, status: args.status,
         dateApplied: args.date_applied ? new Date(args.date_applied) : new Date(),
         jobType: args.job_type ?? null, jobNature: args.job_nature ?? null,
-        companyLocation: args.company_location ?? null, jobLink: args.job_link ?? null,
+        companyLocation: args.company_location ?? null, jobLink: finalJobLink,
         salaryMin: args.salary_min ?? null, salaryMax: args.salary_max ?? null,
         currency: args.currency, priority: args.priority,
         followUpDate: args.follow_up_date ? new Date(args.follow_up_date) : null,
@@ -144,7 +147,7 @@ function createMcpServer() {
     } catch (err) {
       console.error("[Sheets Sync] Background error:", (err as Error).message);
     }
-    return { content: [{ type: "text" as const, text: `✅ Created: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})` }] };
+    return { content: [{ type: "text" as const, text: `✅ Created: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})\n🔗 Job link: ${finalJobLink}${usedPlaceholder ? " (⚠️ placeholder — no real link was provided, update it later)" : ""}` }] };
   });
 
   // ── update_application_status ─────────────────────────────────────────────

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
+import { normalizeJobLink } from "@/lib/job-link";
 
 export async function GET(
   request: Request,
@@ -98,6 +99,15 @@ export async function PUT(
       });
     }
 
+    // Job posting link is compulsory: if client clears it or sends an invalid
+    // URL, regenerate the placeholder instead of storing null/empty.
+    const resolvedCompany = company !== undefined ? company.trim() : existing.company;
+    const resolvedPosition = position !== undefined ? position.trim() : existing.position;
+    const resolvedJobLink =
+      jobLink !== undefined
+        ? normalizeJobLink(jobLink, resolvedCompany, resolvedPosition).url
+        : existing.jobLink;
+
     // Update basic fields
     const updated = await prisma.application.update({
       where: { id },
@@ -109,7 +119,7 @@ export async function PUT(
         jobNature: jobNature !== undefined ? jobNature : existing.jobNature,
         jobType: jobType !== undefined ? jobType : existing.jobType,
         companyLocation: companyLocation !== undefined ? companyLocation : existing.companyLocation,
-        jobLink: jobLink !== undefined ? jobLink : existing.jobLink,
+        jobLink: resolvedJobLink,
         portalId: portalId !== undefined ? (portalId || null) : existing.portalId,
         howApplied: howApplied !== undefined ? howApplied : existing.howApplied,
         resumeVersionId: resumeVersionId !== undefined ? (resumeVersionId || null) : existing.resumeVersionId,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
+import { normalizeJobLink } from "@/lib/job-link";
 
 function mapStatusToEnum(rawStatus?: string): string {
   if (!rawStatus) return "APPLIED";
@@ -107,7 +108,8 @@ export async function POST(request: Request) {
         jobNature: mapJobNatureToEnum(rawNature),
         jobType: mapJobTypeToEnum(rawType),
         companyLocation: location.trim() || null,
-        jobLink: jobLink.trim() || null,
+        // Compulsory: fall back to placeholder when the sheet has no link.
+        jobLink: normalizeJobLink(jobLink, company, position).url,
         howApplied: howApplied.trim() || "Portal",
         comments: comments.trim() || null,
         rawResumeUrl: rawResumeUrl.trim() || null,

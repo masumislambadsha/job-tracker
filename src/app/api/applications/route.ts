@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
 import { appendApplication } from "@/lib/google-sheets";
+import { normalizeJobLink } from "@/lib/job-link";
 
 const APPLICATION_LIST_SELECT = {
   id: true,
@@ -187,6 +188,10 @@ export async function POST(request: Request) {
     const parsedDateApplied = new Date(dateApplied);
     const parsedFollowUpDate = followUpDate ? new Date(followUpDate) : null;
 
+    // Job posting link is compulsory: real link if given, else auto-generated
+    // placeholder like https://company.com/careers/role.
+    const { url: finalJobLink } = normalizeJobLink(jobLink, company, position);
+
     const app = await prisma.application.create({
       data: {
         userId: user.id,
@@ -197,7 +202,7 @@ export async function POST(request: Request) {
         jobNature: jobNature || null,
         jobType: jobType || null,
         companyLocation: companyLocation?.trim() || null,
-        jobLink: jobLink?.trim() || null,
+        jobLink: finalJobLink,
         portalId: portalId || null,
         howApplied: howApplied || null,
         resumeVersionId: resumeVersionId || null,

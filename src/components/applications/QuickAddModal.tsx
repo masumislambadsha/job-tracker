@@ -30,6 +30,7 @@ import {
   HOW_APPLIED_OPTIONS,
   CURRENCIES,
 } from "@/lib/constants";
+import { buildPlaceholderJobLink, isValidJobLink } from "@/lib/job-link";
 import { ApplicationItem, PortalItem, ResumeVersionItem } from "@/lib/types";
 import { ChevronDown, ChevronUp, Star } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -152,8 +153,14 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
   const onSubmit = async (data: FormData) => {
     try {
       setIsSubmitting(true);
+      const trimmedLink = (data.jobLink || "").trim();
+      const finalJobLink =
+        trimmedLink && isValidJobLink(trimmedLink)
+          ? trimmedLink
+          : buildPlaceholderJobLink(data.company, data.position);
       const payload = {
         ...data,
+        jobLink: finalJobLink,
         priority,
         salaryMin: data.salaryMin ? Number(data.salaryMin) : null,
         salaryMax: data.salaryMax ? Number(data.salaryMax) : null,
@@ -258,6 +265,33 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
             />
           </div>
 
+          {/* Compulsory Job Posting URL — always visible; blank auto-generates a placeholder */}
+          <div className="space-y-1">
+            <Label>
+              Job Posting URL <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              type="url"
+              placeholder="https://company.com/careers/role — leave blank to auto-generate"
+              {...register("jobLink", {
+                validate: (v) => {
+                  const t = (v || "").trim();
+                  if (!t) return true; // blank → placeholder auto-fill on submit
+                  return (
+                    isValidJobLink(t) || "Enter a valid http(s) URL or leave blank to auto-generate"
+                  );
+                },
+              })}
+            />
+            {errors.jobLink && (
+              <p className="text-xs font-medium text-destructive">{errors.jobLink.message}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Required — paste the real posting link; if left blank a placeholder like
+              https://company.com/careers/role is generated automatically.
+            </p>
+          </div>
+
           {/* Collapsible More Details Toggle */}
           <div className="pt-1">
             <button
@@ -325,8 +359,8 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
                 />
               </div>
 
-              {/* Resume Variant & Job Posting Link */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* Resume Variant (job link lives in the always-visible required field above) */}
+              <div className="grid grid-cols-1 gap-3">
                 <SelectField
                   control={control}
                   name="resumeVersionId"
@@ -337,14 +371,6 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
                     label: r.label,
                   }))}
                 />
-                <div className="space-y-1">
-                  <Label>Job Posting URL</Label>
-                  <Input
-                    type="url"
-                    placeholder="https://..."
-                    {...register("jobLink")}
-                  />
-                </div>
               </div>
 
               {/* Compensation & Priority */}

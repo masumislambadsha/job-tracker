@@ -28,6 +28,52 @@ async function getDefaultUserId() {
   return user.id;
 }
 
+// ─── Job posting link helpers (mirrors src/lib/job-link.ts) ────────────────
+function slugifyCompanyForDomain(company) {
+  const slug = String(company || "")
+    .toLowerCase()
+    .trim()
+    .replace(/&/g, "and")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+  return slug || "company";
+}
+
+function slugifyPosition(position) {
+  const slug = String(position || "")
+    .toLowerCase()
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/-{2,}/g, "-");
+  return slug || "role";
+}
+
+function buildPlaceholderJobLink(company, position) {
+  return `https://${slugifyCompanyForDomain(company)}.com/careers/${slugifyPosition(position)}`;
+}
+
+function isValidJobLink(url) {
+  if (!url) return false;
+  const trimmed = String(url).trim();
+  if (!/^https?:\/\/.+\..+/.test(trimmed)) return false;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function normalizeJobLink(input, company, position) {
+  const trimmed = String(input || "").trim();
+  if (trimmed && isValidJobLink(trimmed)) return { url: trimmed, usedPlaceholder: false };
+  return { url: buildPlaceholderJobLink(company, position), usedPlaceholder: true };
+}
+
 // ─── MCP Server ──────────────────────────────────────────────────────────────
 const server = new McpServer({
   name: "jobdesk",
@@ -111,6 +157,7 @@ server.tool("list_applications", "List all job applications. Optional filters: s
     job_type: a.jobType,
     priority: a.priority,
     follow_up_date: a.followUpDate,
+    job_link: a.jobLink,
     portal: a.portal?.name ?? null,
     resume: a.resumeVersion?.label ?? null,
     tags: a.tags.map(t => t.tag.name),
@@ -124,7 +171,7 @@ server.tool("list_applications", "List all job applications. Optional filters: s
 // ──────────────────────────────────────────────────────────────────────────────
 // TOOL: add_application
 // ──────────────────────────────────────────────────────────────────────────────
-server.tool("add_application", "Add a new job application to your pipeline.", {
+server.tool("add_application", "Add a new job application to your pipeline. You MUST always provide job_link: use the real job posting URL if the user gave one; if no link was provided, you MUST generate a placeholder from the company and role, e.g. company 'Zayson' + position 'Full Stack Developer' -> 'https://zayson.com/careers/full-stack-developer'. Never omit job_link or store null.", {
   company: z.string().describe("Company name"),
   position: z.string().describe("Job title / role"),
   status: z.enum(["WISHLIST","APPLIED","OA_ASSESSMENT","INTERVIEW_SCHEDULED","INTERVIEW_COMPLETED","OFFER","REJECTED","GHOSTED","WITHDRAWN"]).default("APPLIED"),
@@ -132,7 +179,7 @@ server.tool("add_application", "Add a new job application to your pipeline.", {
   job_type: z.enum(["REMOTE","HYBRID","ONSITE"]).optional(),
   job_nature: z.enum(["FULL_TIME","PART_TIME","CONTRACT","FREELANCE","INTERNSHIP"]).optional(),
   company_location: z.string().optional(),
-  job_link: z.string().optional().describe("Job posting URL"),
+  job_link: z.string().optional().describe("REQUIRED: real job posting URL if known; otherwise generate placeholder https://{company-slug}.com/careers/{position-slug} (e.g. https://zayson.com/careers/full-stack-developer). Never leave blank."),
   salary_min: z.number().optional(),
   salary_max: z.number().optional(),
   currency: z.string().default("USD"),
@@ -141,6 +188,7 @@ server.tool("add_application", "Add a new job application to your pipeline.", {
   comments: z.string().optional(),
 }, async (args) => {
   const userId = await getDefaultUserId();
+  const { url: finalJobLink, usedPlaceholder } = normalizeJobLink(args.job_link, args.company, args.position);
   const app = await prisma.application.create({
     data: {
       userId,
@@ -151,7 +199,7 @@ server.tool("add_application", "Add a new job application to your pipeline.", {
       jobType: args.job_type ?? null,
       jobNature: args.job_nature ?? null,
       companyLocation: args.company_location ?? null,
-      jobLink: args.job_link ?? null,
+      jobLink: finalJobLink,
       salaryMin: args.salary_min ?? null,
       salaryMax: args.salary_max ?? null,
       currency: args.currency,
@@ -164,7 +212,7 @@ server.tool("add_application", "Add a new job application to your pipeline.", {
     },
   });
 
-  return { content: [{ type: "text", text: `✅ Created application: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})` }] };
+  return { content: [{ type: "text", text: `✅ Created application: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})\n🔗 Job link: ${finalJobLink}${usedPlaceholder ? " (⚠️ placeholder — no real link was provided, update it later)" : ""}` }] };
 });
 
 // ──────────────────────────────────────────────────────────────────────────────

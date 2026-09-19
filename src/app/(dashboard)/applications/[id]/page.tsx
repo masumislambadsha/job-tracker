@@ -27,6 +27,7 @@ import {
   HOW_APPLIED_OPTIONS,
   CURRENCIES,
 } from "@/lib/constants";
+import { buildPlaceholderJobLink, isValidJobLink } from "@/lib/job-link";
 import { ApplicationItem, PortalItem, ResumeVersionItem } from "@/lib/types";
 import {
   formatDate,
@@ -187,10 +188,16 @@ export default function ApplicationDetailPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const trimmedLink = (formData.jobLink || "").trim();
+    const finalJobLink =
+      trimmedLink && isValidJobLink(trimmedLink)
+        ? trimmedLink
+        : buildPlaceholderJobLink(formData.company, formData.position);
     try {
       setIsSaving(true);
       const payload = {
         ...formData,
+        jobLink: finalJobLink,
         salaryMin: formData.salaryMin ? Number(formData.salaryMin) : null,
         salaryMax: formData.salaryMax ? Number(formData.salaryMax) : null,
         portalId: formData.portalId || null,
@@ -440,12 +447,17 @@ export default function ApplicationDetailPage() {
                     )}
                   </div>
 
-                  <Field label="Job Posting URL">
+                  <Field label="Job Posting URL *">
                     <Input
                       type="url"
+                      required
+                      placeholder="https://company.com/careers/role — blank auto-generates placeholder"
                       value={formData.jobLink}
                       onChange={(e) => setFormData({ ...formData, jobLink: e.target.value })}
                     />
+                    <p className="text-[11px] text-muted-foreground">
+                      Required — clearing it auto-generates a placeholder on save.
+                    </p>
                   </Field>
                 </div>
 

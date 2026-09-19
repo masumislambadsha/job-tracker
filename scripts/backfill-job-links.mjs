@@ -33,13 +33,29 @@ function buildPlaceholderJobLink(company, position) {
   return `https://${slugifyCompanyForDomain(company)}.com/careers/${slugifyPosition(position)}`;
 }
 
+const BLOCKED_JOB_LINK_HOSTS = [
+  "docs.google.com",
+  "drive.google.com",
+  "forms.google.com",
+  "forms.gle",
+  "sheets.google.com",
+  "slides.google.com",
+];
+
+function isBlockedJobLinkHost(hostname) {
+  const host = String(hostname || "").toLowerCase();
+  return BLOCKED_JOB_LINK_HOSTS.some((b) => host === b || host.endsWith(`.${b}`));
+}
+
 function isValidJobLink(url) {
   if (!url) return false;
   const trimmed = String(url).trim();
   if (!/^https?:\/\/.+\..+/.test(trimmed)) return false;
   try {
     const parsed = new URL(trimmed);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    if (isBlockedJobLinkHost(parsed.hostname)) return false;
+    return true;
   } catch {
     return false;
   }

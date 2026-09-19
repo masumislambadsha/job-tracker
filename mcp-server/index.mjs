@@ -56,22 +56,78 @@ function buildPlaceholderJobLink(company, position) {
   return `https://${slugifyCompanyForDomain(company)}.com/careers/${slugifyPosition(position)}`;
 }
 
+// Google Docs/Forms/Drive hosts can never be a real job posting.
+// Deliberately specific — e.g. careers.google.com stays valid.
+const BLOCKED_JOB_LINK_HOSTS = [
+  "docs.google.com",
+  "drive.google.com",
+  "forms.google.com",
+  "forms.gle",
+  "sheets.google.com",
+  "slides.google.com",
+];
+
+function isBlockedJobLinkHost(hostname) {
+  const host = String(hostname || "").toLowerCase();
+  return BLOCKED_JOB_LINK_HOSTS.some((b) => host === b || host.endsWith(`.${b}`));
+}
+
 function isValidJobLink(url) {
   if (!url) return false;
   const trimmed = String(url).trim();
   if (!/^https?:\/\/.+\..+/.test(trimmed)) return false;
   try {
     const parsed = new URL(trimmed);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+    if (isBlockedJobLinkHost(parsed.hostname)) return false;
+    return true;
   } catch {
     return false;
   }
 }
 
 function normalizeJobLink(input, company, position) {
+  const resolved = resolveJobLink(input, company, position);
+  return { url: resolved.url, usedPlaceholder: resolved.outcome !== "valid" };
+}
+
+function resolveJobLink(input, company, position) {
   const trimmed = String(input || "").trim();
-  if (trimmed && isValidJobLink(trimmed)) return { url: trimmed, usedPlaceholder: false };
-  return { url: buildPlaceholderJobLink(company, position), usedPlaceholder: true };
+  const placeholder = buildPlaceholderJobLink(company, position);
+  if (trimmed) {
+    try {
+      const parsed = new URL(trimmed);
+      if (
+        (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+        isBlockedJobLinkHost(parsed.hostname)
+      ) {
+        return { outcome: "placeholder-blocked", url: placeholder, providedUrl: trimmed, blockedHost: parsed.hostname.toLowerCase() };
+      }
+    } catch {
+      // Not parseable — falls through to generic handling below.
+    }
+    if (isValidJobLink(trimmed)) {
+      return { outcome: "valid", url: trimmed, providedUrl: trimmed };
+    }
+  }
+  return { outcome: "placeholder-missing", url: placeholder };
+}
+
+function blockedJobLinkNotice(providedUrl, placeholder) {
+  return (
+    `⚠️ REJECTED job_link: '${providedUrl}' is a Google Docs/Forms/Drive link — ` +
+    `never a valid job posting. Used placeholder ${placeholder} instead. ` +
+    `Next time: pass the real job posting URL, or omit job_link and a placeholder ` +
+    `is generated automatically. Ask the user for the real link and update it later.`
+  );
+}
+
+function blockedJobLinkUnchangedNotice(providedUrl) {
+  return (
+    `⚠️ REJECTED job_link: '${providedUrl}' is a Google Docs/Forms/Drive link — ` +
+    `never a valid job posting. Left the existing link unchanged. ` +
+    `Pass the real job posting URL to update it.`
+  );
 }
 
 // ─── MCP Server ──────────────────────────────────────────────────────────────
@@ -171,7 +227,7 @@ server.tool("list_applications", "List all job applications. Optional filters: s
 // ──────────────────────────────────────────────────────────────────────────────
 // TOOL: add_application
 // ──────────────────────────────────────────────────────────────────────────────
-server.tool("add_application", "Add a new job application to your pipeline. You MUST always provide job_link: use the real job posting URL if the user gave one; if no link was provided, you MUST generate a placeholder from the company and role, e.g. company 'Zayson' + position 'Full Stack Developer' -> 'https://zayson.com/careers/full-stack-developer'. Never omit job_link or store null.", {
+server.tool("add_application", "Add a new job application to your pipeline. You MUST always provide job_link: use the real job posting URL if the user gave one; if no link was provided, you MUST generate a placeholder from the company and role, e.g. company 'Zayson' + position 'Full Stack Developer' -> 'https://zayson.com/careers/full-stack-developer'. Google Docs, Forms, Sheets, Slides or Drive links are NEVER valid posting links — if the user gives one, the call still succeeds but the link is rejected and replaced with a placeholder; prefer the real posting URL or omit job_link. Never omit job_link or store null.", {
   company: z.string().describe("Company name"),
   position: z.string().describe("Job title / role"),
   status: z.enum(["WISHLIST","APPLIED","OA_ASSESSMENT","INTERVIEW_SCHEDULED","INTERVIEW_COMPLETED","OFFER","REJECTED","GHOSTED","WITHDRAWN"]).default("APPLIED"),
@@ -179,7 +235,7 @@ server.tool("add_application", "Add a new job application to your pipeline. You 
   job_type: z.enum(["REMOTE","HYBRID","ONSITE"]).optional(),
   job_nature: z.enum(["FULL_TIME","PART_TIME","CONTRACT","FREELANCE","INTERNSHIP"]).optional(),
   company_location: z.string().optional(),
-  job_link: z.string().optional().describe("REQUIRED: real job posting URL if known; otherwise generate placeholder https://{company-slug}.com/careers/{position-slug} (e.g. https://zayson.com/careers/full-stack-developer). Never leave blank."),
+  job_link: z.string().optional().describe("REQUIRED: real job posting URL if known; otherwise generate placeholder https://{company-slug}.com/careers/{position-slug} (e.g. https://zayson.com/careers/full-stack-developer). Google Docs/Forms/Drive links are never valid — generate the placeholder instead. Never leave blank."),
   salary_min: z.number().optional(),
   salary_max: z.number().optional(),
   currency: z.string().default("USD"),
@@ -188,7 +244,14 @@ server.tool("add_application", "Add a new job application to your pipeline. You 
   comments: z.string().optional(),
 }, async (args) => {
   const userId = await getDefaultUserId();
-  const { url: finalJobLink, usedPlaceholder } = normalizeJobLink(args.job_link, args.company, args.position);
+  const resolvedLink = resolveJobLink(args.job_link, args.company, args.position);
+  const finalJobLink = resolvedLink.url;
+  const linkNotice =
+    resolvedLink.outcome === "placeholder-blocked"
+      ? `\n${blockedJobLinkNotice(resolvedLink.providedUrl, finalJobLink)}`
+      : resolvedLink.outcome === "placeholder-missing"
+        ? `\n🔗 Job link: ${finalJobLink} (⚠️ placeholder — no real link was provided, update it later)`
+        : `\n🔗 Job link: ${finalJobLink}`;
   const app = await prisma.application.create({
     data: {
       userId,
@@ -212,7 +275,7 @@ server.tool("add_application", "Add a new job application to your pipeline. You 
     },
   });
 
-  return { content: [{ type: "text", text: `✅ Created application: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})\n🔗 Job link: ${finalJobLink}${usedPlaceholder ? " (⚠️ placeholder — no real link was provided, update it later)" : ""}` }] };
+  return { content: [{ type: "text", text: `✅ Created application: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})${linkNotice}` }] };
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -252,10 +315,23 @@ server.tool("update_application", "Update any fields of an application (follow-u
   salary_max: z.number().optional(),
   currency: z.string().optional(),
   company_location: z.string().optional(),
-  job_link: z.string().optional(),
+  job_link: z.string().optional().describe("Real job posting URL. Google Docs/Forms/Drive links are rejected and left unchanged — pass the real posting URL instead."),
 }, async ({ id, follow_up_date, comments, priority, salary_min, salary_max, currency, company_location, job_link }) => {
   const existing = await prisma.application.findUnique({ where: { id } });
   if (!existing) return { content: [{ type: "text", text: `❌ Application not found: ${id}` }] };
+
+  // Never store a Docs/Forms/Drive link: skip it, apply everything else.
+  let linkNotice = "";
+  let resolvedJobLink;
+  if (job_link !== undefined) {
+    const resolved = resolveJobLink(job_link, existing.company, existing.position);
+    if (resolved.outcome === "valid") {
+      resolvedJobLink = resolved.url;
+    } else if (resolved.outcome === "placeholder-blocked") {
+      linkNotice = `\n${blockedJobLinkUnchangedNotice(resolved.providedUrl)}`;
+    }
+    // blank/malformed on update: keep the existing link, no noise.
+  }
 
   await prisma.application.update({
     where: { id },
@@ -267,11 +343,11 @@ server.tool("update_application", "Update any fields of an application (follow-u
       ...(salary_max !== undefined ? { salaryMax: salary_max } : {}),
       ...(currency !== undefined ? { currency } : {}),
       ...(company_location !== undefined ? { companyLocation: company_location } : {}),
-      ...(job_link !== undefined ? { jobLink: job_link } : {}),
+      ...(resolvedJobLink !== undefined ? { jobLink: resolvedJobLink } : {}),
     },
   });
 
-  return { content: [{ type: "text", text: `✅ Updated application: ${existing.company} — ${existing.position}` }] };
+  return { content: [{ type: "text", text: `✅ Updated application: ${existing.company} — ${existing.position}${linkNotice}` }] };
 });
 
 // ──────────────────────────────────────────────────────────────────────────────

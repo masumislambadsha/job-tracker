@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
 import { appendApplication } from "@/lib/google-sheets";
-import { normalizeJobLink } from "@/lib/job-link";
+import { normalizeJobLink, resolveJobLink } from "@/lib/job-link";
 
 const APPLICATION_LIST_SELECT = {
   id: true,
@@ -188,8 +188,21 @@ export async function POST(request: Request) {
     const parsedDateApplied = new Date(dateApplied);
     const parsedFollowUpDate = followUpDate ? new Date(followUpDate) : null;
 
-    // Job posting link is compulsory: real link if given, else auto-generated
-    // placeholder like https://company.com/careers/role.
+    // Job posting link is compulsory: real link if given, auto-generated
+    // placeholder like https://company.com/careers/role when omitted.
+    // An explicit Google Docs/Forms/Drive link is rejected so the caller
+    // learns it is never a valid posting.
+    const resolvedLink = resolveJobLink(jobLink, company, position);
+    if (resolvedLink.outcome === "placeholder-blocked") {
+      return NextResponse.json(
+        {
+          error: "jobLink rejected: Google Docs/Forms/Drive links are never valid job posting links.",
+          hint: "Omit jobLink to auto-generate a placeholder, or provide the real job posting URL.",
+          placeholder: resolvedLink.url,
+        },
+        { status: 400 }
+      );
+    }
     const { url: finalJobLink } = normalizeJobLink(jobLink, company, position);
 
     const app = await prisma.application.create({

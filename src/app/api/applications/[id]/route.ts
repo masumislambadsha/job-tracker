@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
-import { normalizeJobLink } from "@/lib/job-link";
+import { normalizeJobLink, resolveJobLink } from "@/lib/job-link";
 
 export async function GET(
   request: Request,
@@ -101,8 +101,23 @@ export async function PUT(
 
     // Job posting link is compulsory: if client clears it or sends an invalid
     // URL, regenerate the placeholder instead of storing null/empty.
+    // An explicit Google Docs/Forms/Drive link is rejected outright so the
+    // caller learns it is never a valid posting (nothing is updated).
     const resolvedCompany = company !== undefined ? company.trim() : existing.company;
     const resolvedPosition = position !== undefined ? position.trim() : existing.position;
+    if (jobLink !== undefined) {
+      const resolved = resolveJobLink(jobLink, resolvedCompany, resolvedPosition);
+      if (resolved.outcome === "placeholder-blocked") {
+        return NextResponse.json(
+          {
+            error: "jobLink rejected: Google Docs/Forms/Drive links are never valid job posting links.",
+            hint: "Omit jobLink to auto-generate a placeholder, or provide the real job posting URL.",
+            placeholder: resolved.url,
+          },
+          { status: 400 }
+        );
+      }
+    }
     const resolvedJobLink =
       jobLink !== undefined
         ? normalizeJobLink(jobLink, resolvedCompany, resolvedPosition).url

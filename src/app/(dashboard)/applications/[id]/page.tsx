@@ -27,7 +27,7 @@ import {
   HOW_APPLIED_OPTIONS,
   CURRENCIES,
 } from "@/lib/constants";
-import { buildPlaceholderJobLink, isValidJobLink } from "@/lib/job-link";
+import { buildPlaceholderJobLink, isBlockedJobLinkHost, isValidJobLink } from "@/lib/job-link";
 import { ApplicationItem, PortalItem, ResumeVersionItem } from "@/lib/types";
 import {
   formatDate,
@@ -110,6 +110,7 @@ export default function ApplicationDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [jobLinkError, setJobLinkError] = useState("");
 
   // Form State
   const [formData, setFormData] = useState({
@@ -189,6 +190,23 @@ export default function ApplicationDetailPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedLink = (formData.jobLink || "").trim();
+    // Reject Docs/Forms/Drive (or malformed) links with guidance instead of
+    // silently storing them; blank auto-generates a placeholder.
+    if (trimmedLink && !isValidJobLink(trimmedLink)) {
+      let blocked = false;
+      try {
+        blocked = isBlockedJobLinkHost(new URL(trimmedLink).hostname);
+      } catch {
+        blocked = false;
+      }
+      setJobLinkError(
+        blocked
+          ? "Google Docs/Forms/Drive links are not accepted — clear the field to auto-generate a placeholder, or paste the real posting URL."
+          : "Enter a valid http(s) job posting URL, or clear the field to auto-generate a placeholder."
+      );
+      return;
+    }
+    setJobLinkError("");
     const finalJobLink =
       trimmedLink && isValidJobLink(trimmedLink)
         ? trimmedLink
@@ -450,14 +468,21 @@ export default function ApplicationDetailPage() {
                   <Field label="Job Posting URL *">
                     <Input
                       type="url"
-                      required
                       placeholder="https://company.com/careers/role — blank auto-generates placeholder"
                       value={formData.jobLink}
-                      onChange={(e) => setFormData({ ...formData, jobLink: e.target.value })}
+                      onChange={(e) => {
+                        setFormData({ ...formData, jobLink: e.target.value });
+                        if (jobLinkError) setJobLinkError("");
+                      }}
                     />
-                    <p className="text-[11px] text-muted-foreground">
-                      Required — clearing it auto-generates a placeholder on save.
-                    </p>
+                    {jobLinkError ? (
+                      <p className="text-[11px] font-medium text-destructive">{jobLinkError}</p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground">
+                        Required — Google Docs/Forms/Drive links are rejected; clearing it
+                        auto-generates a placeholder on save.
+                      </p>
+                    )}
                   </Field>
                 </div>
 

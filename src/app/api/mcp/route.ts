@@ -6,7 +6,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
-import { normalizeJobLink } from "@/lib/job-link";
+import { blockedJobLinkNotice, blockedJobLinkUnchangedNotice, resolveJobLink } from "@/lib/job-link";
 import { isMcpAuthorized, mcpCorsHeaders, getMcpToken } from "@/lib/mcp-token";
 import { isOAuthAccessToken } from "@/lib/oauth";
 import { appendApplication } from "@/lib/google-sheets";
@@ -111,7 +111,7 @@ function createMcpServer() {
   });
 
   // ── add_application ───────────────────────────────────────────────────────
-  server.tool("add_application", "Add a new job application to the pipeline. You MUST always provide job_link: use the real job posting URL if the user gave one; if no link was provided, you MUST generate a placeholder from the company and role, e.g. company 'Zayson' + position 'Full Stack Developer' -> 'https://zayson.com/careers/full-stack-developer'. Never omit job_link or store null.", {
+  server.tool("add_application", "Add a new job application to the pipeline. You MUST always provide job_link: use the real job posting URL if the user gave one; if no link was provided, you MUST generate a placeholder from the company and role, e.g. company 'Zayson' + position 'Full Stack Developer' -> 'https://zayson.com/careers/full-stack-developer'. Google Docs, Forms, Sheets, Slides or Drive links are NEVER valid posting links — if the user gives one, the call still succeeds but the link is rejected and replaced with a placeholder; prefer the real posting URL or omit job_link. Never omit job_link or store null.", {
     company: z.string(),
     position: z.string(),
     status: z.enum(["WISHLIST","APPLIED","OA_ASSESSMENT","INTERVIEW_SCHEDULED","INTERVIEW_COMPLETED","OFFER","REJECTED","GHOSTED","WITHDRAWN"]).default("APPLIED"),
@@ -119,7 +119,7 @@ function createMcpServer() {
     job_type: z.enum(["REMOTE","HYBRID","ONSITE"]).optional(),
     job_nature: z.enum(["FULL_TIME","PART_TIME","CONTRACT","FREELANCE","INTERNSHIP"]).optional(),
     company_location: z.string().optional(),
-    job_link: z.string().optional().describe("REQUIRED: real job posting URL if known; otherwise generate placeholder https://{company-slug}.com/careers/{position-slug} (e.g. https://zayson.com/careers/full-stack-developer). Never leave blank."),
+    job_link: z.string().optional().describe("REQUIRED: real job posting URL if known; otherwise generate placeholder https://{company-slug}.com/careers/{position-slug} (e.g. https://zayson.com/careers/full-stack-developer). Google Docs/Forms/Drive links are never valid — generate the placeholder instead. Never leave blank."),
     salary_min: z.number().optional(),
     salary_max: z.number().optional(),
     currency: z.string().default("USD"),
@@ -128,7 +128,14 @@ function createMcpServer() {
     comments: z.string().optional(),
   }, async (args) => {
     const userId = await getOrCreateDefaultUser().then(u => u.id);
-    const { url: finalJobLink, usedPlaceholder } = normalizeJobLink(args.job_link, args.company, args.position);
+    const resolvedLink = resolveJobLink(args.job_link, args.company, args.position);
+    const finalJobLink = resolvedLink.url;
+    const linkNotice =
+      resolvedLink.outcome === "placeholder-blocked"
+        ? `\n${blockedJobLinkNotice(resolvedLink.providedUrl!, finalJobLink)}`
+        : resolvedLink.outcome === "placeholder-missing"
+          ? `\n🔗 Job link: ${finalJobLink} (⚠️ placeholder — no real link was provided, update it later)`
+          : `\n🔗 Job link: ${finalJobLink}`;
     const app = await prisma.application.create({
       data: {
         userId, company: args.company, position: args.position, status: args.status,
@@ -147,7 +154,7 @@ function createMcpServer() {
     } catch (err) {
       console.error("[Sheets Sync] Background error:", (err as Error).message);
     }
-    return { content: [{ type: "text" as const, text: `✅ Created: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})\n🔗 Job link: ${finalJobLink}${usedPlaceholder ? " (⚠️ placeholder — no real link was provided, update it later)" : ""}` }] };
+    return { content: [{ type: "text" as const, text: `✅ Created: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})${linkNotice}` }] };
   });
 
   // ── update_application_status ─────────────────────────────────────────────
@@ -178,10 +185,22 @@ function createMcpServer() {
     salary_max: z.number().optional(),
     currency: z.string().optional(),
     company_location: z.string().optional(),
-    job_link: z.string().optional(),
+    job_link: z.string().optional().describe("Real job posting URL. Google Docs/Forms/Drive links are rejected and left unchanged — pass the real posting URL instead."),
   }, async ({ id, follow_up_date, comments, priority, salary_min, salary_max, currency, company_location, job_link }) => {
     const existing = await prisma.application.findUnique({ where: { id } });
     if (!existing) return { content: [{ type: "text" as const, text: `❌ Not found: ${id}` }] };
+    // Never store a Docs/Forms/Drive link: skip it, apply everything else.
+    let linkNotice = "";
+    let resolvedJobLink: string | undefined;
+    if (job_link !== undefined) {
+      const resolved = resolveJobLink(job_link, existing.company, existing.position);
+      if (resolved.outcome === "valid") {
+        resolvedJobLink = resolved.url;
+      } else if (resolved.outcome === "placeholder-blocked") {
+        linkNotice = `\n${blockedJobLinkUnchangedNotice(resolved.providedUrl!)}`;
+      }
+      // blank/malformed on update: keep the existing link, no noise.
+    }
     await prisma.application.update({
       where: { id },
       data: {
@@ -192,10 +211,10 @@ function createMcpServer() {
         ...(salary_max !== undefined ? { salaryMax: salary_max } : {}),
         ...(currency !== undefined ? { currency } : {}),
         ...(company_location !== undefined ? { companyLocation: company_location } : {}),
-        ...(job_link !== undefined ? { jobLink: job_link } : {}),
+        ...(resolvedJobLink !== undefined ? { jobLink: resolvedJobLink } : {}),
       },
     });
-    return { content: [{ type: "text" as const, text: `✅ Updated: ${existing.company} — ${existing.position}` }] };
+    return { content: [{ type: "text" as const, text: `✅ Updated: ${existing.company} — ${existing.position}${linkNotice}` }] };
   });
 
   // ── delete_application ────────────────────────────────────────────────────

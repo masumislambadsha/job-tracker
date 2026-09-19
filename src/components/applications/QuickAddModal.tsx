@@ -278,7 +278,8 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
                   const t = (v || "").trim();
                   if (!t) return true; // blank → placeholder auto-fill on submit
                   return (
-                    isValidJobLink(t) || "Enter a valid http(s) URL or leave blank to auto-generate"
+                    isValidJobLink(t) ||
+                    "Enter a valid job posting URL (Google Docs/Forms/Drive links are not accepted) or leave blank to auto-generate"
                   );
                 },
               })}
@@ -287,7 +288,8 @@ export function QuickAddModal({ isOpen, onClose, onSuccess }: QuickAddModalProps
               <p className="text-xs font-medium text-destructive">{errors.jobLink.message}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Required — paste the real posting link; if left blank a placeholder like
+              Required — paste the real posting link (Google Docs/Forms/Drive links are
+              rejected); if left blank a placeholder like
               https://company.com/careers/role is generated automatically.
             </p>
           </div>

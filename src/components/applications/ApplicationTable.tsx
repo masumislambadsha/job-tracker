@@ -35,6 +35,7 @@ import {
   Trash2,
   AlertCircle,
   Briefcase,
+  Loader2,
 } from "lucide-react";
 
 interface ApplicationTableProps {
@@ -45,6 +46,7 @@ interface ApplicationTableProps {
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
+  isFiltering?: boolean;
   total?: number;
 }
 
@@ -56,6 +58,7 @@ export function ApplicationTable({
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
+  isFiltering = false,
   total,
 }: ApplicationTableProps) {
   const router = useRouter();
@@ -121,17 +124,37 @@ export function ApplicationTable({
   if (applications.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12 text-center">
-        <Briefcase className="h-8 w-8 text-muted-foreground mb-2" />
-        <h3 className="text-sm font-semibold">No applications found</h3>
-        <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">
-          Try adjusting your search filters or click &quot;New Application&quot; to log a job.
-        </p>
+        {isFiltering ? (
+          <>
+            <Loader2 className="h-8 w-8 text-muted-foreground mb-2 animate-spin" />
+            <h3 className="text-sm font-semibold">Filtering applications…</h3>
+            <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">
+              Applying your search and filters.
+            </p>
+          </>
+        ) : (
+          <>
+            <Briefcase className="h-8 w-8 text-muted-foreground mb-2" />
+            <h3 className="text-sm font-semibold">No applications found</h3>
+            <p className="text-xs text-muted-foreground mt-0.5 max-w-xs">
+              Try adjusting your search filters or click &quot;New Application&quot; to log a job.
+            </p>
+          </>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+    <div className="relative rounded-lg border bg-card shadow-sm overflow-hidden">
+      {isFiltering && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center gap-2 bg-background/60 backdrop-blur-[1px]">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">
+            Filtering applications…
+          </span>
+        </div>
+      )}
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent border-border bg-muted/50">

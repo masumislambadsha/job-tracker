@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { QuickAddModal } from "@/components/applications/QuickAddModal";
 import { KanbanSkeleton } from "@/components/ui/skeleton";
-import { Plus, RefreshCw, Layers, Search, X } from "lucide-react";
+import { Plus, RefreshCw, Layers, Search, X, Loader2 } from "lucide-react";
 import { ApplicationItem, ApplicationStatus, PortalItem } from "@/lib/types";
 import { fetchAllApplications } from "@/lib/fetch-applications";
 
@@ -57,6 +57,7 @@ export default function KanbanBoardPage() {
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [filters, setFilters] = useState<BoardFilters>(getInitialBoardFilters);
@@ -70,8 +71,14 @@ export default function KanbanBoardPage() {
 
   const fetchApplications = useCallback(async () => {
     try {
+      // Manual refresh and filter changes share the spinner; first load
+      // uses the skeleton instead.
+      if (hasLoadedRef.current) {
+        setIsFiltering(true);
+      } else {
+        setIsLoading(true);
+      }
       setIsRefreshing(true);
-      if (!hasLoadedRef.current) setIsLoading(true);
       const f = filtersRef.current;
       const params: Record<string, string> = {
         sortBy: "dateApplied",
@@ -96,6 +103,7 @@ export default function KanbanBoardPage() {
       setHasLoaded(true);
       setIsLoading(false);
       setIsRefreshing(false);
+      setIsFiltering(false);
     }
   }, []);
 
@@ -263,14 +271,24 @@ export default function KanbanBoardPage() {
       </div>
 
       {/* Kanban Board */}
-      {hasLoaded ? (
-        <KanbanBoard
-          applications={applications}
-          onStatusChange={handleStatusChange}
-          onOpenQuickAddWithStatus={() => setIsQuickAddOpen(true)}
-        />
-      ) : (
+      {!hasLoaded && isLoading ? (
         <KanbanSkeleton />
+      ) : (
+        <div className="relative">
+          {isFiltering && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center gap-2 rounded-lg bg-background/60 backdrop-blur-[1px]">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">
+                Filtering board…
+              </span>
+            </div>
+          )}
+          <KanbanBoard
+            applications={applications}
+            onStatusChange={handleStatusChange}
+            onOpenQuickAddWithStatus={() => setIsQuickAddOpen(true)}
+          />
+        </div>
       )}
 
       {/* Quick Add Modal */}

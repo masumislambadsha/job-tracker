@@ -81,6 +81,7 @@ export default function ApplicationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
@@ -103,6 +104,11 @@ export default function ApplicationsPage() {
           setIsLoading(true);
         } else if (cursor) {
           setIsLoadingMore(true);
+        } else {
+          // Search / filter / sort change on already-loaded data:
+          // keep stale rows visible under an overlay instead of flashing
+          // an empty table.
+          setIsFiltering(true);
         }
 
         const f = filtersRef.current;
@@ -148,6 +154,7 @@ export default function ApplicationsPage() {
         setIsLoading(false);
         setIsRefreshing(false);
         setIsLoadingMore(false);
+        setIsFiltering(false);
       }
     },
     []
@@ -160,7 +167,6 @@ export default function ApplicationsPage() {
     if (lastFiltersKey.current === filtersKey) return;
     lastFiltersKey.current = filtersKey;
     setNextCursor(null);
-    setApplications([]);
     fetchData();
   }, [filtersKey, fetchData]);
 
@@ -309,7 +315,9 @@ export default function ApplicationsPage() {
       />
 
       {/* Table Content */}
-      {hasLoaded ? (
+      {!hasLoaded && isLoading ? (
+        <TableSkeleton />
+      ) : (
         <ApplicationTable
           applications={applications}
           onDelete={handleDelete}
@@ -318,10 +326,9 @@ export default function ApplicationsPage() {
           onLoadMore={handleLoadMore}
           hasMore={Boolean(nextCursor)}
           isLoadingMore={isLoadingMore}
+          isFiltering={isFiltering || isRefreshing}
           total={total}
         />
-      ) : (
-        <TableSkeleton />
       )}
 
       {/* Quick Add Modal */}

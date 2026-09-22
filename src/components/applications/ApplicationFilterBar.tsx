@@ -165,7 +165,7 @@ export function ApplicationFilterBar({
       </div>
 
       {/* Filter Dropdowns Row */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 pt-2 border-t">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7 pt-2 border-t">
         <Select
           value={filters.status}
           onValueChange={(v) => update("status", v)}
@@ -251,13 +251,16 @@ export function ApplicationFilterBar({
           </SelectContent>
         </Select>
 
-        <DateRangePicker
-          className="w-full"
-          label="Date Applied"
-          visibleMonths={2}
-          value={rangeValue}
-          onChange={handleRangeChange}
-        />
+        <div className="col-span-2 sm:col-span-2 lg:col-span-2 min-w-0">
+          <DateRangePicker
+            className="w-full max-w-full"
+            label="Date Applied"
+            labelPlacement="inside"
+            visibleMonths={1}
+            value={rangeValue}
+            onChange={handleRangeChange}
+          />
+        </div>
       </div>
     </div>
   );

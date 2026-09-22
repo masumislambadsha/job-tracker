@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Search, X, ArrowUpDown } from "lucide-react";
-import { DateField, DateRangePicker, Label, RangeCalendar } from "@heroui/react";
+import { DateRangePicker } from "@heroui/react";
 import { parseDate } from "@internationalized/date";
 import { STATUS_PIPELINE, JOB_TYPE_OPTIONS, JOB_NATURE_OPTIONS } from "@/lib/constants";
 import { PortalItem } from "@/lib/types";
@@ -253,50 +253,11 @@ export function ApplicationFilterBar({
 
         <DateRangePicker
           className="w-full"
+          label="Date Applied"
+          visibleMonths={2}
           value={rangeValue}
           onChange={handleRangeChange}
-        >
-          <Label>Date Applied</Label>
-          <DateField.Group fullWidth>
-            <DateField.Input slot="start">
-              {(segment) => <DateField.Segment segment={segment} />}
-            </DateField.Input>
-            <DateRangePicker.RangeSeparator />
-            <DateField.Input slot="end">
-              {(segment) => <DateField.Segment segment={segment} />}
-            </DateField.Input>
-            <DateField.Suffix>
-              <DateRangePicker.Trigger>
-                <DateRangePicker.TriggerIndicator />
-              </DateRangePicker.Trigger>
-            </DateField.Suffix>
-          </DateField.Group>
-          <DateRangePicker.Popover>
-            <RangeCalendar aria-label="Date applied">
-              <RangeCalendar.Header>
-                <RangeCalendar.YearPickerTrigger>
-                  <RangeCalendar.YearPickerTriggerHeading />
-                  <RangeCalendar.YearPickerTriggerIndicator />
-                </RangeCalendar.YearPickerTrigger>
-                <RangeCalendar.NavButton slot="previous" />
-                <RangeCalendar.NavButton slot="next" />
-              </RangeCalendar.Header>
-              <RangeCalendar.Grid>
-                <RangeCalendar.GridHeader>
-                  {(day) => <RangeCalendar.HeaderCell>{day}</RangeCalendar.HeaderCell>}
-                </RangeCalendar.GridHeader>
-                <RangeCalendar.GridBody>
-                  {(date) => <RangeCalendar.Cell date={date} />}
-                </RangeCalendar.GridBody>
-              </RangeCalendar.Grid>
-              <RangeCalendar.YearPickerGrid>
-                <RangeCalendar.YearPickerGridBody>
-                  {({ year }) => <RangeCalendar.YearPickerCell year={year} />}
-                </RangeCalendar.YearPickerGridBody>
-              </RangeCalendar.YearPickerGrid>
-            </RangeCalendar>
-          </DateRangePicker.Popover>
-        </DateRangePicker>
+        />
       </div>
     </div>
   );

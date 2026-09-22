@@ -1,5 +1,7 @@
 import type { Config } from "tailwindcss";
+import type { PluginsConfig } from "tailwindcss/types/config";
 import animate from "tailwindcss-animate";
+import { heroui } from "@heroui/react";
 
 const config: Config = {
   darkMode: ["class"],
@@ -7,6 +9,11 @@ const config: Config = {
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    // HeroUI theme classes. Both paths are listed because npm may hoist
+    // @heroui/theme to the top level or nest it under @heroui/react;
+    // non-matching globs are harmless.
+    "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@heroui/react/node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
@@ -78,7 +85,9 @@ const config: Config = {
       },
     },
   },
-  plugins: [animate],
+  // HeroUI v2.8's theme types target Tailwind v4 while this project builds
+  // with Tailwind v3. The plugin is runtime-compatible, so bridge the types.
+  plugins: [animate, heroui() as unknown as PluginsConfig[number]],
 };
 
 export default config;

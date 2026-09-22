@@ -109,19 +109,28 @@ export default function KanbanBoardPage() {
   }, [filtersKey, fetchApplications]);
 
   // Keep the URL shareable: /applications/board?search=&portalId=&tagId=
+  // String dep + location guard so replace only fires on real changes.
+  const urlQuery = (() => {
+    const params = new URLSearchParams();
+    if (effectiveFilters.search) params.set("search", effectiveFilters.search);
+    if (effectiveFilters.portalId) params.set("portalId", effectiveFilters.portalId);
+    if (effectiveFilters.tagId) params.set("tagId", effectiveFilters.tagId);
+    return params.toString();
+  })();
+
   const isFirstUrlSync = useRef(true);
   useEffect(() => {
     if (isFirstUrlSync.current) {
       isFirstUrlSync.current = false;
       return;
     }
-    const params = new URLSearchParams();
-    if (effectiveFilters.search) params.set("search", effectiveFilters.search);
-    if (effectiveFilters.portalId) params.set("portalId", effectiveFilters.portalId);
-    if (effectiveFilters.tagId) params.set("tagId", effectiveFilters.tagId);
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [filtersKey, effectiveFilters, router, pathname]);
+    const current =
+      typeof window !== "undefined"
+        ? window.location.search.replace(/^\?/, "")
+        : null;
+    if (current === urlQuery) return;
+    router.replace(urlQuery ? `${pathname}?${urlQuery}` : pathname, { scroll: false });
+  }, [urlQuery, router, pathname]);
 
   const handleStatusChange = async (id: string, newStatus: ApplicationStatus) => {
     // Optimistic UI update

@@ -166,12 +166,11 @@ export default function ApplicationsPage() {
 
   // Push effective (debounced) filters to the URL for shareable links.
   // Skips the very first run to avoid replacing deep links on mount.
-  const isFirstUrlSync = useRef(true);
-  useEffect(() => {
-    if (isFirstUrlSync.current) {
-      isFirstUrlSync.current = false;
-      return;
-    }
+  // `urlQuery` is a plain string so the effect only fires when values
+  // actually change (a fresh object dep would re-fire every render and
+  // loop router.replace → navigation → render). The location equality
+  // guard makes back/forward navigation a no-op instead of a loop.
+  const urlQuery = (() => {
     const params = new URLSearchParams();
     if (effectiveFilters.search) params.set("search", effectiveFilters.search);
     if (effectiveFilters.status) params.set("status", effectiveFilters.status);
@@ -183,9 +182,22 @@ export default function ApplicationsPage() {
     if (effectiveFilters.dateTo) params.set("dateTo", effectiveFilters.dateTo);
     params.set("sortBy", effectiveFilters.sortBy);
     params.set("sortOrder", effectiveFilters.sortOrder);
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  }, [filtersKey, effectiveFilters, router, pathname]);
+    return params.toString();
+  })();
+
+  const isFirstUrlSync = useRef(true);
+  useEffect(() => {
+    if (isFirstUrlSync.current) {
+      isFirstUrlSync.current = false;
+      return;
+    }
+    const current =
+      typeof window !== "undefined"
+        ? window.location.search.replace(/^\?/, "")
+        : null;
+    if (current === urlQuery) return;
+    router.replace(urlQuery ? `${pathname}?${urlQuery}` : pathname, { scroll: false });
+  }, [urlQuery, router, pathname]);
 
   const handleStatusChange = async (id: string, newStatus: ApplicationStatus) => {
     // Optimistic UI update

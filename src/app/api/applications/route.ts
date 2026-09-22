@@ -52,15 +52,19 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search");
-    const status = searchParams.get("status");
-    const jobType = searchParams.get("jobType");
-    const jobNature = searchParams.get("jobNature");
-    const portalId = searchParams.get("portalId");
-    const resumeVersionId = searchParams.get("resumeVersionId");
+    const search = searchParams.get("search")?.trim() || null;
+    const status = searchParams.get("status")?.trim() || null;
+    const jobType = searchParams.get("jobType")?.trim() || null;
+    const jobNature = searchParams.get("jobNature")?.trim() || null;
+    const portalId = searchParams.get("portalId")?.trim() || null;
+    const resumeVersionId = searchParams.get("resumeVersionId")?.trim() || null;
+    const tagId = searchParams.get("tagId")?.trim() || null;
+    const tag = searchParams.get("tag")?.trim() || null;
     const hasFollowUp = searchParams.get("hasFollowUp") === "true";
-    const dateFrom = searchParams.get("dateFrom");
-    const dateTo = searchParams.get("dateTo");
+    const dateFrom = searchParams.get("dateFrom")?.trim() || null;
+    const dateTo = searchParams.get("dateTo")?.trim() || null;
+    const followUpFrom = searchParams.get("followUpFrom")?.trim() || null;
+    const followUpTo = searchParams.get("followUpTo")?.trim() || null;
     const sortBy = SORTABLE_FIELDS.has(searchParams.get("sortBy") || "")
       ? (searchParams.get("sortBy") as string)
       : "dateApplied";
@@ -92,8 +96,27 @@ export async function GET(request: Request) {
     if (resumeVersionId) {
       where.resumeVersionId = resumeVersionId;
     }
+    if (tagId) {
+      where.tags = { some: { tagId } };
+    } else if (tag) {
+      where.tags = { some: { tag: { name: tag.toLowerCase() } } };
+    }
 
-    if (hasFollowUp) {
+    if (followUpFrom || followUpTo) {
+      where.followUpDate = {};
+      if (followUpFrom) {
+        const from = new Date(`${followUpFrom}T00:00:00.000Z`);
+        if (!Number.isNaN(from.getTime())) where.followUpDate.gte = from;
+      }
+      if (followUpTo) {
+        const to = new Date(`${followUpTo}T23:59:59.999Z`);
+        if (!Number.isNaN(to.getTime())) where.followUpDate.lte = to;
+      }
+      // An empty range object matches everything on Mongo; drop it.
+      if (Object.keys(where.followUpDate).length === 0) {
+        delete where.followUpDate;
+      }
+    } else if (hasFollowUp) {
       where.followUpDate = { not: null };
     }
 
@@ -109,10 +132,15 @@ export async function GET(request: Request) {
     if (dateFrom || dateTo) {
       where.dateApplied = {};
       if (dateFrom) {
-        where.dateApplied.gte = new Date(`${dateFrom}T00:00:00.000Z`);
+        const from = new Date(`${dateFrom}T00:00:00.000Z`);
+        if (!Number.isNaN(from.getTime())) where.dateApplied.gte = from;
       }
       if (dateTo) {
-        where.dateApplied.lte = new Date(`${dateTo}T23:59:59.999Z`);
+        const to = new Date(`${dateTo}T23:59:59.999Z`);
+        if (!Number.isNaN(to.getTime())) where.dateApplied.lte = to;
+      }
+      if (Object.keys(where.dateApplied).length === 0) {
+        delete where.dateApplied;
       }
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { ApplicationTable } from "@/components/applications/ApplicationTable";
 import { ApplicationFilterBar } from "@/components/applications/ApplicationFilterBar";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,53 @@ import { Plus, Download, RefreshCw } from "lucide-react";
 import { ApplicationItem, ApplicationStatus, PortalItem } from "@/lib/types";
 
 const PAGE_SIZE = 20;
+
+type Filters = {
+  search: string;
+  status: string;
+  jobType: string;
+  jobNature: string;
+  portalId: string;
+  tagId: string;
+  dateFrom: string;
+  dateTo: string;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
+};
+
+const DEFAULT_FILTERS: Filters = {
+  search: "",
+  status: "",
+  jobType: "",
+  jobNature: "",
+  portalId: "",
+  tagId: "",
+  dateFrom: "",
+  dateTo: "",
+  sortBy: "dateApplied",
+  sortOrder: "desc",
+};
+
+// Read initial filter state from the URL so filtered views are shareable
+// and survive refresh. One-way sync after mount (filters → URL); guarded
+// for SSR where window is undefined.
+function getInitialFilters(): Filters {
+  if (typeof window === "undefined") return DEFAULT_FILTERS;
+  const params = new URLSearchParams(window.location.search);
+  const sortOrder = params.get("sortOrder");
+  return {
+    search: params.get("search") ?? "",
+    status: params.get("status") ?? "",
+    jobType: params.get("jobType") ?? "",
+    jobNature: params.get("jobNature") ?? "",
+    portalId: params.get("portalId") ?? "",
+    tagId: params.get("tagId") ?? "",
+    dateFrom: params.get("dateFrom") ?? "",
+    dateTo: params.get("dateTo") ?? "",
+    sortBy: params.get("sortBy") || "dateApplied",
+    sortOrder: sortOrder === "asc" ? "asc" : "desc",
+  };
+}
 
 function useDebouncedValue<T>(value: T, delay = 300): T {
   const [debounced, setDebounced] = useState(value);
@@ -23,8 +71,11 @@ function useDebouncedValue<T>(value: T, delay = 300): T {
 }
 
 export default function ApplicationsPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [portals, setPortals] = useState<PortalItem[]>([]);
+  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [total, setTotal] = useState(0);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,17 +84,7 @@ export default function ApplicationsPage() {
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  const [filters, setFilters] = useState({
-    search: "",
-    status: "",
-    jobType: "",
-    jobNature: "",
-    portalId: "",
-    dateFrom: "",
-    dateTo: "",
-    sortBy: "dateApplied",
-    sortOrder: "desc" as "asc" | "desc",
-  });
+  const [filters, setFilters] = useState<Filters>(getInitialFilters);
 
   const debouncedSearch = useDebouncedValue(filters.search, 300);
   const effectiveFilters = { ...filters, search: debouncedSearch };
@@ -71,6 +112,7 @@ export default function ApplicationsPage() {
         if (f.jobType) params.set("jobType", f.jobType);
         if (f.jobNature) params.set("jobNature", f.jobNature);
         if (f.portalId) params.set("portalId", f.portalId);
+        if (f.tagId) params.set("tagId", f.tagId);
         if (f.dateFrom) params.set("dateFrom", f.dateFrom);
         if (f.dateTo) params.set("dateTo", f.dateTo);
         params.set("sortBy", f.sortBy);
@@ -78,14 +120,16 @@ export default function ApplicationsPage() {
         params.set("pageSize", String(PAGE_SIZE));
         if (cursor) params.set("cursor", cursor);
 
-        const [appsRes, portalsRes] = await Promise.all([
+        const [appsRes, portalsRes, tagsRes] = await Promise.all([
           fetch(`/api/applications?${params.toString()}`),
           fetch("/api/portals"),
+          fetch("/api/tags"),
         ]);
 
-        const [appsData, portalsData] = await Promise.all([
+        const [appsData, portalsData, tagsData] = await Promise.all([
           appsRes.json(),
           portalsRes.json(),
+          tagsRes.json(),
         ]);
 
         if (appsData && Array.isArray(appsData.data)) {
@@ -96,6 +140,7 @@ export default function ApplicationsPage() {
           );
         }
         if (Array.isArray(portalsData)) setPortals(portalsData);
+        if (Array.isArray(tagsData)) setTags(tagsData);
       } catch (err) {
         console.error("Error fetching table data:", err);
       } finally {
@@ -118,6 +163,29 @@ export default function ApplicationsPage() {
     setApplications([]);
     fetchData();
   }, [filtersKey, fetchData]);
+
+  // Push effective (debounced) filters to the URL for shareable links.
+  // Skips the very first run to avoid replacing deep links on mount.
+  const isFirstUrlSync = useRef(true);
+  useEffect(() => {
+    if (isFirstUrlSync.current) {
+      isFirstUrlSync.current = false;
+      return;
+    }
+    const params = new URLSearchParams();
+    if (effectiveFilters.search) params.set("search", effectiveFilters.search);
+    if (effectiveFilters.status) params.set("status", effectiveFilters.status);
+    if (effectiveFilters.jobType) params.set("jobType", effectiveFilters.jobType);
+    if (effectiveFilters.jobNature) params.set("jobNature", effectiveFilters.jobNature);
+    if (effectiveFilters.portalId) params.set("portalId", effectiveFilters.portalId);
+    if (effectiveFilters.tagId) params.set("tagId", effectiveFilters.tagId);
+    if (effectiveFilters.dateFrom) params.set("dateFrom", effectiveFilters.dateFrom);
+    if (effectiveFilters.dateTo) params.set("dateTo", effectiveFilters.dateTo);
+    params.set("sortBy", effectiveFilters.sortBy);
+    params.set("sortOrder", effectiveFilters.sortOrder);
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [filtersKey, effectiveFilters, router, pathname]);
 
   const handleStatusChange = async (id: string, newStatus: ApplicationStatus) => {
     // Optimistic UI update
@@ -225,6 +293,7 @@ export default function ApplicationsPage() {
         filters={filters}
         onChange={setFilters}
         portals={portals}
+        tags={tags}
       />
 
       {/* Table Content */}

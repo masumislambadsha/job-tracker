@@ -33,10 +33,11 @@ import {
 
 interface ApplicationCalendarProps {
   applications: ApplicationItem[];
+  currentMonth: Date;
+  onMonthChange: (month: Date) => void;
 }
 
-export function ApplicationCalendar({ applications }: ApplicationCalendarProps) {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+export function ApplicationCalendar({ applications, currentMonth, onMonthChange }: ApplicationCalendarProps) {
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
 
   const monthStart = startOfMonth(currentMonth);
@@ -79,7 +80,7 @@ export function ApplicationCalendar({ applications }: ApplicationCalendarProps) 
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => setCurrentMonth(new Date())}
+              onClick={() => onMonthChange(new Date())}
               className="text-xs h-8 px-3"
             >
               Today
@@ -87,7 +88,7 @@ export function ApplicationCalendar({ applications }: ApplicationCalendarProps) 
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+              onClick={() => onMonthChange(subMonths(currentMonth, 1))}
               className="h-8 w-8"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -95,7 +96,7 @@ export function ApplicationCalendar({ applications }: ApplicationCalendarProps) 
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+              onClick={() => onMonthChange(addMonths(currentMonth, 1))}
               className="h-8 w-8"
             >
               <ChevronRight className="h-4 w-4" />

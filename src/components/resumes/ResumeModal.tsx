@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ResumeVersionItem } from "@/lib/types";
-import { Upload, FileText, CheckCircle2, Link2, Loader2 } from "lucide-react";
+import { Upload, FileText, CheckCircle2, Link2 } from "lucide-react";
 
 interface ResumeModalProps {
   isOpen: boolean;
@@ -27,8 +26,8 @@ export function ResumeModal({ isOpen, onClose, resume, onSuccess }: ResumeModalP
   const [label, setLabel] = useState("");
   const [url, setUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadedFileName, setUploadedFileName] = useState("");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [mode, setMode] = useState<"upload" | "url">("upload");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,46 +37,42 @@ export function ResumeModal({ isOpen, onClose, resume, onSuccess }: ResumeModalP
       setLabel(resume.label);
       setUrl(resume.url);
       setUploadedFileName(
-        resume.url.startsWith("/resumes/") ? resume.url.replace("/resumes/", "") : ""
+        resume.fileName || (resume.url.startsWith("/resumes/") ? resume.url.replace("/resumes/", "") : "")
       );
+      setPendingFile(null);
       setMode(resume.url.startsWith("http") ? "url" : "upload");
     } else {
       setLabel("");
       setUrl("");
       setUploadedFileName("");
+      setPendingFile(null);
       setMode("upload");
     }
   }, [resume, isOpen]);
 
-  const processFile = async (file: File) => {
+  const processFile = (file: File) => {
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       alert("Please select a valid PDF file.");
       return;
     }
 
-    try {
-      setIsUploading(true);
-      const formData = new FormData();
-      formData.append("file", file);
+    if (file.size > 8 * 1024 * 1024) {
+      alert("PDF must be under 8MB.");
+      return;
+    }
 
-      const res = await fetch("/api/resumes/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-
-      setUrl(data.url);
-      setUploadedFileName(data.filename);
-      if (!label) {
-        setLabel(data.suggestedLabel);
-      }
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      alert(err.message || "Failed to upload PDF file");
-    } finally {
-      setIsUploading(false);
+    // Keep the file client-side and send it together with the label in a
+    // single request on Save (avoids a separate upload round-trip and works
+    // on Vercel where the filesystem is read-only).
+    setPendingFile(file);
+    setUploadedFileName(file.name.toLowerCase().replace(/[^a-z0-9_.-]/g, "_"));
+    if (!label) {
+      const suggested = file.name
+        .toLowerCase()
+        .replace(/\.pdf$/i, "")
+        .replace(/[_-]+/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      setLabel(suggested);
     }
   };
 
@@ -95,35 +90,58 @@ export function ResumeModal({ isOpen, onClose, resume, onSuccess }: ResumeModalP
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!label || !url) return;
+    if (!label) return;
+    if (mode === "upload" && !pendingFile && !url) return;
+    if (mode === "url" && !url) return;
 
     try {
       setIsSubmitting(true);
-      const payload = { label: label.trim(), url: url.trim() };
 
-      if (resume?.id) {
-        await fetch(`/api/resumes/${resume.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      if (mode === "upload" && pendingFile) {
+        // Single-request path: label + PDF together (stored in MongoDB).
+        const formData = new FormData();
+        formData.append("label", label.trim());
+        formData.append("file", pendingFile);
+
+        const endpoint = resume?.id ? `/api/resumes/${resume.id}` : "/api/resumes";
+        const method = resume?.id ? "PUT" : "POST";
+        const res = await fetch(endpoint, { method, body: formData });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to save resume version.");
       } else {
-        await fetch("/api/resumes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        // URL mode, or editing metadata without replacing the file.
+        const payload: Record<string, string> = { label: label.trim(), url: url.trim() };
+
+        if (resume?.id) {
+          const res = await fetch(`/api/resumes/${resume.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Failed to save resume version.");
+        } else {
+          const res = await fetch("/api/resumes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Failed to save resume version.");
+        }
       }
 
       onSuccess();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Resume submit error:", err);
-      alert("Failed to save resume version.");
+      alert(err.message || "Failed to save resume version.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const hasAttachment = Boolean(pendingFile || url);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -186,17 +204,12 @@ export function ResumeModal({ isOpen, onClose, resume, onSuccess }: ResumeModalP
                 className={`flex flex-col items-center justify-center p-6 rounded-lg border-2 border-dashed transition-all cursor-pointer text-center ${
                   isDraggingOver
                     ? "border-primary bg-accent"
-                    : url
+                    : hasAttachment
                     ? "border-emerald-500/50 bg-emerald-950/15"
                     : "border-border hover:border-muted-foreground/40 bg-card"
                 }`}
               >
-                {isUploading ? (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Uploading PDF...</span>
-                  </div>
-                ) : url ? (
+                {hasAttachment ? (
                   <div className="flex flex-col items-center gap-1">
                     <CheckCircle2 className="h-7 w-7 text-emerald-400" />
                     <span className="text-xs font-semibold text-foreground">{uploadedFileName || "PDF Attached"}</span>
@@ -250,7 +263,7 @@ export function ResumeModal({ isOpen, onClose, resume, onSuccess }: ResumeModalP
             </Button>
             <Button
               type="submit"
-              disabled={!label || !url || isUploading}
+              disabled={!label || (mode === "upload" ? !hasAttachment : !url)}
             >
               {isSubmitting ? "Saving..." : resume ? "Update Resume" : "Save Resume"}
             </Button>

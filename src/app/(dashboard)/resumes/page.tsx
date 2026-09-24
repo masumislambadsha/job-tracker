@@ -188,7 +188,7 @@ export default function ResumesPage() {
               {/* Footer action link */}
               <div className="mt-3 pt-2.5 border-t border-border flex items-center justify-between">
                 <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[170px]">
-                  {resume.url.startsWith("/resumes/") ? "PDF File" : "Google Drive"}
+                  {resume.hasFile || resume.url.startsWith("/resumes/") ? "PDF File" : "Google Drive"}
                 </span>
 
                 <div className="flex items-center gap-2.5">
@@ -196,7 +196,7 @@ export default function ResumesPage() {
                     href={`/api/resumes/${resume.id}/download`}
                     download
                     className="inline-flex items-center gap-1 text-[11px] font-medium text-foreground hover:underline"
-                    title={resume.url.startsWith("/resumes/") ? "Download PDF" : "Open source link"}
+                    title={resume.hasFile || resume.url.startsWith("/resumes/") ? "Download PDF" : "Open source link"}
                   >
                     <span>Download</span>
                     <Download className="h-3 w-3" />

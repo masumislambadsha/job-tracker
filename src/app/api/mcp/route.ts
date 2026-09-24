@@ -253,7 +253,7 @@ function createMcpServer() {
     return {
       content: [{
         type: "text" as const,
-        text: JSON.stringify(resumes.map(r => ({ id: r.id, label: r.label, url: r.url, source: r.url.startsWith("/resumes/") ? "local_pdf" : "external_url" })), null, 2),
+        text: JSON.stringify(resumes.map(r => ({ id: r.id, label: r.label, url: r.url, hasFile: Boolean(r.fileData || r.fileSize), source: (r.fileData || r.url.startsWith("/resumes/")) ? "stored_pdf" : "external_url" })), null, 2),
       }],
     };
   });
@@ -265,6 +265,25 @@ function createMcpServer() {
     const resume = await prisma.resumeVersion.findUnique({ where: { id } });
     if (!resume) {
       return { content: [{ type: "text" as const, text: `❌ Resume not found: ${id}` }] };
+    }
+
+    // PDFs stored in MongoDB (works in production) — preferred.
+    if (resume.fileData) {
+      const buffer = Buffer.from(resume.fileData, "base64");
+      return {
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify({
+            label: resume.label,
+            mime_type: resume.mimeType || "application/pdf",
+            size_bytes: buffer.length,
+            download_endpoint: `/api/resumes/${id}/download`,
+            encoding: "base64",
+            data_base64: resume.fileData,
+            note: "Decode data_base64 from base64 to binary and save with a .pdf extension.",
+          }, null, 2),
+        }],
+      };
     }
 
     if (!resume.url.startsWith("/resumes/")) {
@@ -300,7 +319,7 @@ function createMcpServer() {
         }],
       };
     } catch {
-      return { content: [{ type: "text" as const, text: `❌ Resume file missing on disk: ${safeName}` }] };
+      return { content: [{ type: "text" as const, text: `❌ Resume file not found. Please re-upload the PDF.` }] };
     }
   });
 

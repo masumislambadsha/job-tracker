@@ -21,10 +21,39 @@ export async function GET(
       return NextResponse.json({ error: "Resume not found" }, { status: 404 });
     }
 
+    // 1) PDFs stored in MongoDB (works on Vercel serverless) — preferred.
+    if (resume.fileData) {
+      const buffer = Buffer.from(resume.fileData, "base64");
+      const downloadName = `${resume.label.replace(/[^a-z0-9 _()-]/gi, "").trim() || resume.fileName?.replace(/\.pdf$/i, "") || "resume"}.pdf`;
+
+      return new NextResponse(new Uint8Array(buffer), {
+        headers: {
+          "Content-Type": resume.mimeType || "application/pdf",
+          "Content-Length": String(buffer.length),
+          "Content-Disposition": `attachment; filename="${downloadName}"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    // 2) External URLs (Google Drive etc.)
     if (!resume.url.startsWith("/resumes/")) {
+      // Legacy data: URLs were sometimes stored as full data: URLs.
+      if (resume.url.startsWith("data:application/pdf;base64,")) {
+        const buffer = Buffer.from(resume.url.split(",")[1] || "", "base64");
+        return new NextResponse(new Uint8Array(buffer), {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Length": String(buffer.length),
+            "Content-Disposition": `attachment; filename="${resume.label.replace(/[^a-z0-9 _()-]/gi, "").trim() || "resume"}.pdf"`,
+            "Cache-Control": "no-store",
+          },
+        });
+      }
       return NextResponse.redirect(resume.url);
     }
 
+    // 3) Legacy local-disk files (local dev only; ephemeral/missing on Vercel).
     const safeName = path.basename(resume.url);
     if (!/^[a-z0-9_.-]+\.pdf$/i.test(safeName)) {
       return NextResponse.json({ error: "Invalid resume file" }, { status: 400 });
@@ -49,7 +78,7 @@ export async function GET(
       });
     } catch {
       return NextResponse.json(
-        { error: "Resume file no longer exists on disk" },
+        { error: "Resume file not found. Please re-upload the PDF." },
         { status: 404 }
       );
     }

@@ -84,6 +84,10 @@ export interface ResumeVersionItem {
   userId: string;
   label: string;
   url: string;
+  fileName?: string | null;
+  mimeType?: string | null;
+  fileSize?: number | null;
+  hasFile?: boolean;
   createdAt: string;
   applicationsCount?: number;
   callbacksCount?: number;

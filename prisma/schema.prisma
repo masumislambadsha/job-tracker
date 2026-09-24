@@ -88,6 +88,10 @@ model ResumeVersion {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   label        String
   url          String
+  fileData     String?
+  fileName     String?
+  mimeType     String?
+  fileSize     Int?
   createdAt    DateTime      @default(now())
   applications Application[]
 

@@ -1,5 +1,10 @@
 node_modules
 .next
+out
+dist
+build
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 .env
 .env.local
 mcp-server/.token

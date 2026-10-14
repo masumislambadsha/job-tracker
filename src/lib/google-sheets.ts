@@ -32,26 +32,30 @@ function getSheetsClient(): sheets_v4.Sheets {
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID!;
 const SHEET_RANGE = process.env.GOOGLE_SHEET_RANGE || "Sheet1!A:S";
 
-// Must match the sheet's actual header row, in exact order (columns A through S).
+// Must match the user's sheet header row, in exact order (columns A through S).
+// User order: Date, Company, Position, Job Link, Job Nature, Job Type,
+// Company Location, Job Status, Comments, Source / Portal, How Applied,
+// Resume Version, Resume URL, Salary Min, Salary Max, Currency, Priority,
+// Follow-up Date, Tags.
 const HEADER_ROW = [
-  "Company", // A
-  "Position", // B
-  "Date Applied", // C
-  "Status", // D
+  "Date", // A
+  "Company", // B
+  "Position", // C
+  "Job Link", // D
   "Job Nature", // E
   "Job Type", // F
   "Company Location", // G
-  "Job Link", // H
-  "Source / Portal", // I
-  "How Applied", // J
-  "Resume Version", // K
-  "Resume URL", // L
-  "Salary Min", // M
-  "Salary Max", // N
-  "Currency", // O
-  "Priority", // P
-  "Follow-up Date", // Q
-  "Comments", // R
+  "Job Status", // H
+  "Comments", // I
+  "Source / Portal", // J
+  "How Applied", // K
+  "Resume Version", // L
+  "Resume URL", // M
+  "Salary Min", // N
+  "Salary Max", // O
+  "Currency", // P
+  "Priority", // Q
+  "Follow-up Date", // R
   "Tags", // S
 ];
 
@@ -88,26 +92,29 @@ function mapApplicationToRow(app: any): (string | number | null)[] {
   };
 
   // IMPORTANT: Order MUST match the sheet header row exactly (columns A:S).
-  // Do NOT rely on Object.values() or object key order.
+  // User order: Date, Company, Position, Job Link, Job Nature, Job Type,
+  // Company Location, Job Status, Comments, Source / Portal, How Applied,
+  // Resume Version, Resume URL, Salary Min, Salary Max, Currency, Priority,
+  // Follow-up Date, Tags. Do NOT rely on Object.values() or object key order.
   return [
-    app.company || "", // A: Company
-    app.position || "", // B: Position
-    formatDate(app.dateApplied), // C: Date Applied
-    app.status || "", // D: Status
+    formatDate(app.dateApplied), // A: Date
+    app.company || "", // B: Company
+    app.position || "", // C: Position
+    app.jobLink || "", // D: Job Link
     app.jobNature || "", // E: Job Nature
     app.jobType || "", // F: Job Type
     app.companyLocation || "", // G: Company Location
-    app.jobLink || "", // H: Job Link
-    portalName, // I: Source / Portal
-    app.howApplied || "", // J: How Applied
-    resumeLabel, // K: Resume Version
-    resumeUrl, // L: Resume URL
-    app.salaryMin ?? "", // M: Salary Min
-    app.salaryMax ?? "", // N: Salary Max
-    app.currency || "USD", // O: Currency
-    app.priority ?? "", // P: Priority
-    formatDate(app.followUpDate), // Q: Follow-up Date
-    app.comments || "", // R: Comments
+    app.status || "", // H: Job Status
+    app.comments || "", // I: Comments
+    portalName, // J: Source / Portal
+    app.howApplied || "", // K: How Applied
+    resumeLabel, // L: Resume Version
+    resumeUrl, // M: Resume URL
+    app.salaryMin ?? "", // N: Salary Min
+    app.salaryMax ?? "", // O: Salary Max
+    app.currency || "USD", // P: Currency
+    app.priority ?? "", // Q: Priority
+    formatDate(app.followUpDate), // R: Follow-up Date
     tags, // S: Tags
   ];
 }

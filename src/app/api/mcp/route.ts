@@ -120,12 +120,16 @@ function createMcpServer() {
     job_nature: z.enum(["FULL_TIME","PART_TIME","CONTRACT","FREELANCE","INTERNSHIP"]).optional(),
     company_location: z.string().optional(),
     job_link: z.string().optional().describe("REQUIRED: real job posting URL if known; otherwise generate placeholder https://{company-slug}.com/careers/{position-slug} (e.g. https://zayson.com/careers/full-stack-developer). Google Docs/Forms/Drive links are never valid — generate the placeholder instead. Never leave blank."),
+    portal: z.string().optional().describe("Source / Portal name, e.g. LinkedIn, bdjobs, React Jobs. Created if it doesn't exist."),
+    how_applied: z.string().optional().describe("How applied: Portal, Referral, Direct Email, LinkedIn, WhatsApp, Company Career Site, Other"),
+    resume_version_id: z.string().optional().describe("Resume version ID from list_resumes"),
     salary_min: z.number().optional(),
     salary_max: z.number().optional(),
     currency: z.string().default("USD"),
     priority: z.number().min(1).max(5).default(3),
     follow_up_date: z.string().optional().describe("YYYY-MM-DD"),
     comments: z.string().optional(),
+    tags: z.array(z.string()).optional().describe("Tags, e.g. [\"dream-company\", \"cold-apply\"]"),
   }, async (args) => {
     const userId = await getOrCreateDefaultUser().then(u => u.id);
     const resolvedLink = resolveJobLink(args.job_link, args.company, args.position);
@@ -136,12 +140,29 @@ function createMcpServer() {
         : resolvedLink.outcome === "placeholder-missing"
           ? `\n🔗 Job link: ${finalJobLink} (⚠️ placeholder — no real link was provided, update it later)`
           : `\n🔗 Job link: ${finalJobLink}`;
+    // Resolve Source / Portal: find-or-create so the sheet's J column is populated.
+    let portalId: string | null = null;
+    if (args.portal?.trim()) {
+      const name = args.portal.trim();
+      const existingPortal = await prisma.portal.findFirst({ where: { userId, name } });
+      if (existingPortal) {
+        portalId = existingPortal.id;
+      } else {
+        const created = await prisma.portal.create({
+          data: { userId, name, url: finalJobLink.startsWith("http") ? finalJobLink : "https://example.com", notes: "Auto-created via MCP" },
+        });
+        portalId = created.id;
+      }
+    }
     const app = await prisma.application.create({
       data: {
         userId, company: args.company, position: args.position, status: args.status,
         dateApplied: args.date_applied ? new Date(args.date_applied) : new Date(),
         jobType: args.job_type ?? null, jobNature: args.job_nature ?? null,
         companyLocation: args.company_location ?? null, jobLink: finalJobLink,
+        portalId,
+        howApplied: args.how_applied ?? null,
+        resumeVersionId: args.resume_version_id ?? null,
         salaryMin: args.salary_min ?? null, salaryMax: args.salary_max ?? null,
         currency: args.currency, priority: args.priority,
         followUpDate: args.follow_up_date ? new Date(args.follow_up_date) : null,
@@ -149,8 +170,26 @@ function createMcpServer() {
         statusHistory: { create: { fromStatus: null, toStatus: args.status, changedAt: new Date() } },
       },
     });
+    // Link tags.
+    if (Array.isArray(args.tags)) {
+      for (const raw of args.tags) {
+        const cleanTag = String(raw).trim().toLowerCase();
+        if (!cleanTag) continue;
+        let tagRecord = await prisma.tag.findFirst({ where: { userId, name: cleanTag } });
+        if (!tagRecord) tagRecord = await prisma.tag.create({ data: { userId, name: cleanTag } });
+        try {
+          await prisma.applicationTag.create({ data: { applicationId: app.id, tagId: tagRecord.id } });
+        } catch { /* duplicate link — ignore */ }
+      }
+    }
     try {
-      await appendApplication(app);
+      // Refetch with relations so the sheet row has portal/resume/tags filled in.
+      // Column order is canonical (Date → Tags, A:S) per src/lib/google-sheets.ts.
+      const populated = await prisma.application.findUnique({
+        where: { id: app.id },
+        include: { portal: true, resumeVersion: true, tags: { include: { tag: true } } },
+      });
+      await appendApplication(populated ?? app);
     } catch (err) {
       console.error("[Sheets Sync] Background error:", (err as Error).message);
     }

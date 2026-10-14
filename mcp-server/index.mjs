@@ -130,6 +130,65 @@ function blockedJobLinkUnchangedNotice(providedUrl) {
   );
 }
 
+// ─── Google Sheets sync (mirrors src/lib/google-sheets.ts) ─────────────────
+// Canonical column order — MUST match the user's sheet exactly:
+// Date, Company, Position, Job Link, Job Nature, Job Type,
+// Company Location, Job Status, Comments, Source / Portal, How Applied,
+// Resume Version, Resume URL, Salary Min, Salary Max, Currency, Priority,
+// Follow-up Date, Tags (columns A:S).
+async function syncApplicationToSheet(app, portalName, resumeLabel, resumeUrl, tagNames) {
+  const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+  const credentialsB64 = process.env.GOOGLE_SHEETS_CREDENTIALS_JSON;
+  if (!spreadsheetId || !credentialsB64) return; // sheets not configured — skip silently
+  try {
+    const { google } = await import("googleapis");
+    const credentials = JSON.parse(Buffer.from(credentialsB64, "base64").toString("utf-8"));
+    const auth = new google.auth.JWT({
+      email: credentials.client_email,
+      key: credentials.private_key,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+    const sheets = google.sheets({ version: "v4", auth });
+    const range = process.env.GOOGLE_SHEET_RANGE || "Sheet1!A:S";
+    const fmt = (d) => {
+      if (!d) return "";
+      const date = new Date(d);
+      return isNaN(date.getTime()) ? "" : date.toISOString().split("T")[0];
+    };
+    const row = [
+      fmt(app.dateApplied), // A: Date
+      app.company || "", // B: Company
+      app.position || "", // C: Position
+      app.jobLink || "", // D: Job Link
+      app.jobNature || "", // E: Job Nature
+      app.jobType || "", // F: Job Type
+      app.companyLocation || "", // G: Company Location
+      app.status || "", // H: Job Status
+      app.comments || "", // I: Comments
+      portalName || "", // J: Source / Portal
+      app.howApplied || "", // K: How Applied
+      resumeLabel || "", // L: Resume Version
+      resumeUrl || "", // M: Resume URL
+      app.salaryMin ?? "", // N: Salary Min
+      app.salaryMax ?? "", // O: Salary Max
+      app.currency || "USD", // P: Currency
+      app.priority ?? "", // Q: Priority
+      fmt(app.followUpDate), // R: Follow-up Date
+      (tagNames || []).join(", "), // S: Tags
+    ];
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range,
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [row] },
+    });
+    console.error(`[Sheets] Synced application: ${app.company} - ${app.position}`);
+  } catch (err) {
+    console.error("[Sheets] Append failed:", err?.message || err);
+  }
+}
+
 // ─── MCP Server ──────────────────────────────────────────────────────────────
 const server = new McpServer({
   name: "jobdesk",
@@ -236,12 +295,16 @@ server.tool("add_application", "Add a new job application to your pipeline. You 
   job_nature: z.enum(["FULL_TIME","PART_TIME","CONTRACT","FREELANCE","INTERNSHIP"]).optional(),
   company_location: z.string().optional(),
   job_link: z.string().optional().describe("REQUIRED: real job posting URL if known; otherwise generate placeholder https://{company-slug}.com/careers/{position-slug} (e.g. https://zayson.com/careers/full-stack-developer). Google Docs/Forms/Drive links are never valid — generate the placeholder instead. Never leave blank."),
+  portal: z.string().optional().describe("Source / Portal name, e.g. LinkedIn, bdjobs, React Jobs. Created if it doesn't exist."),
+  how_applied: z.string().optional().describe("How applied: Portal, Referral, Direct Email, LinkedIn, WhatsApp, Company Career Site, Other"),
+  resume_version_id: z.string().optional().describe("Resume version ID from list_resumes"),
   salary_min: z.number().optional(),
   salary_max: z.number().optional(),
   currency: z.string().default("USD"),
   priority: z.number().min(1).max(5).default(3),
   follow_up_date: z.string().optional().describe("Next follow-up date (YYYY-MM-DD)"),
   comments: z.string().optional(),
+  tags: z.array(z.string()).optional().describe("Tags, e.g. [\"dream-company\", \"cold-apply\"]"),
 }, async (args) => {
   const userId = await getDefaultUserId();
   const resolvedLink = resolveJobLink(args.job_link, args.company, args.position);
@@ -252,6 +315,21 @@ server.tool("add_application", "Add a new job application to your pipeline. You 
       : resolvedLink.outcome === "placeholder-missing"
         ? `\n🔗 Job link: ${finalJobLink} (⚠️ placeholder — no real link was provided, update it later)`
         : `\n🔗 Job link: ${finalJobLink}`;
+  // Resolve Source / Portal: find-or-create so the sheet's J column is populated.
+  let portalId = null;
+  let portalName = "";
+  if (args.portal?.trim()) {
+    portalName = args.portal.trim();
+    const existingPortal = await prisma.portal.findFirst({ where: { userId, name: portalName } });
+    if (existingPortal) {
+      portalId = existingPortal.id;
+    } else {
+      const created = await prisma.portal.create({
+        data: { userId, name: portalName, url: finalJobLink.startsWith("http") ? finalJobLink : "https://example.com", notes: "Auto-created via MCP" },
+      });
+      portalId = created.id;
+    }
+  }
   const app = await prisma.application.create({
     data: {
       userId,
@@ -263,6 +341,9 @@ server.tool("add_application", "Add a new job application to your pipeline. You 
       jobNature: args.job_nature ?? null,
       companyLocation: args.company_location ?? null,
       jobLink: finalJobLink,
+      portalId,
+      howApplied: args.how_applied ?? null,
+      resumeVersionId: args.resume_version_id ?? null,
       salaryMin: args.salary_min ?? null,
       salaryMax: args.salary_max ?? null,
       currency: args.currency,
@@ -274,6 +355,32 @@ server.tool("add_application", "Add a new job application to your pipeline. You 
       },
     },
   });
+
+  // Link tags.
+  const tagNames = [];
+  if (Array.isArray(args.tags)) {
+    for (const raw of args.tags) {
+      const cleanTag = String(raw).trim().toLowerCase();
+      if (!cleanTag) continue;
+      tagNames.push(cleanTag);
+      let tagRecord = await prisma.tag.findFirst({ where: { userId, name: cleanTag } });
+      if (!tagRecord) tagRecord = await prisma.tag.create({ data: { userId, name: cleanTag } });
+      try {
+        await prisma.applicationTag.create({ data: { applicationId: app.id, tagId: tagRecord.id } });
+      } catch { /* duplicate link — ignore */ }
+    }
+  }
+
+  // Resolve resume label/url for the sheet's L/M columns.
+  let resumeLabel = "";
+  let resumeUrl = "";
+  if (args.resume_version_id) {
+    const resume = await prisma.resumeVersion.findUnique({ where: { id: args.resume_version_id } });
+    if (resume) { resumeLabel = resume.label || ""; resumeUrl = resume.url || ""; }
+  }
+
+  // Sync to Google Sheet in canonical order (Date → Tags, A:S). Skipped silently if sheets env vars are unset.
+  await syncApplicationToSheet(app, portalName, resumeLabel, resumeUrl, tagNames);
 
   return { content: [{ type: "text", text: `✅ Created application: ${app.company} — ${app.position} [${app.status}] (id: ${app.id})${linkNotice}` }] };
 });

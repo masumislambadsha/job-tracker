@@ -118,7 +118,7 @@ export function CsvImportModal({ isOpen, onClose, onSuccess }: CsvImportModalPro
         <DialogHeader>
           <DialogTitle>Import Google Sheet / CSV</DialogTitle>
           <DialogDescription>
-            Upload your existing spreadsheet. Column mapping matching Appendix B is applied automatically.
+            Upload your spreadsheet exported as CSV. Columns match your sheet order exactly (Date → Tags) — no remapping needed.
           </DialogDescription>
         </DialogHeader>
 
@@ -136,7 +136,7 @@ export function CsvImportModal({ isOpen, onClose, onSuccess }: CsvImportModalPro
                 {file ? file.name : "Click to select or drop CSV file"}
               </h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Pre-configured for Google Sheet format (Date, Company, Position, Job Status, Resume Drive...)
+                Matches your sheet: Date, Company, Position, Job Link, Job Nature, Job Type, Location, Job Status, Comments, Source / Portal, How Applied, Resume Version, Resume URL, Salary, Currency, Priority, Follow-up Date, Tags
               </p>
               <input
                 ref={fileInputRef}
@@ -148,8 +148,8 @@ export function CsvImportModal({ isOpen, onClose, onSuccess }: CsvImportModalPro
             </div>
 
             <div className="rounded-xl bg-muted p-3.5 border text-xs text-muted-foreground space-y-1">
-              <span className="font-semibold text-foreground block">Pre-Mapped Columns (Appendix B):</span>
-              <p>• Date, Company, Position, Job Status, Job Nature, Job Type, Location, Resume Drive, How Applied, Comments</p>
+              <span className="font-semibold text-foreground block">Expected Columns (your exact sheet order):</span>
+              <p>• Date, Company, Position, Job Link, Job Nature, Job Type, Company Location, Job Status, Comments, Source / Portal, How Applied, Resume Version, Resume URL, Salary Min, Salary Max, Currency, Priority, Follow-up Date, Tags</p>
             </div>
           </div>
         )}

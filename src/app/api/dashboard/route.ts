@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { getCurrentUser, getOrCreateDefaultUser } from "@/lib/auth";
 import { calculatePercentage } from "@/lib/utils";
 import { RESPONSE_STATUSES } from "@/lib/constants";
-import { format, subWeeks, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
+import { format, subWeeks, startOfWeek, endOfWeek, isWithinInterval, differenceInCalendarWeeks } from "date-fns";
 
 const TERMINAL_STATUSES = ["REJECTED", "GHOSTED", "WITHDRAWN"];
 const NO_RESPONSE_STATUSES = ["WISHLIST", "APPLIED", "GHOSTED"];
@@ -70,15 +70,33 @@ export async function GET() {
       },
     };
 
-    // ── 2. Weekly Application Trend (last 8 weeks, single lean query) ─────
-    const trendStart = startOfWeek(subWeeks(now, 7), { weekStartsOn: 5 });
+    // ── 2. Weekly Application Trend (all time, single lean query) ─────────
     const appliedDates = await prisma.application.findMany({
-      where: { userId: user.id, dateApplied: { gte: trendStart } },
+      where: { userId: user.id },
       select: { dateApplied: true },
     });
 
+    let weekCount = 8;
+    if (appliedDates.length > 0) {
+      const earliest = appliedDates.reduce<Date>((min, { dateApplied }) => {
+        const d = new Date(dateApplied);
+        return d < min ? d : min;
+      }, new Date(appliedDates[0].dateApplied));
+      const firstWeekStart = startOfWeek(earliest, { weekStartsOn: 5 });
+      const currentWeekStart = startOfWeek(now, { weekStartsOn: 5 });
+      weekCount = Math.max(
+        8,
+        Math.min(
+          differenceInCalendarWeeks(currentWeekStart, firstWeekStart, {
+            weekStartsOn: 5,
+          }) + 1,
+          520
+        )
+      );
+    }
+
     const weeklyTrend: { week: string; range?: string; count: number }[] = [];
-    for (let i = 7; i >= 0; i--) {
+    for (let i = weekCount - 1; i >= 0; i--) {
       const targetDate = subWeeks(now, i);
       const weekStart = startOfWeek(targetDate, { weekStartsOn: 5 });
       const weekEnd = endOfWeek(targetDate, { weekStartsOn: 5 });

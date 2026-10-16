@@ -36,6 +36,15 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
   const totalInPeriod = data.reduce((acc, curr) => acc + curr.count, 0);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const minWidth = Math.max(data.length * 64, 560);
+
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (el) {
+      el.scrollLeft = el.scrollWidth;
+    }
+  }, [data.length]);
 
   return (
     <Card className="h-full">
@@ -43,7 +52,7 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
         <div>
           <CardTitle className="text-base">Application Volume</CardTitle>
           <CardDescription>
-            Weekly (Fri–Thu) application cadence over the last 8 weeks
+            Weekly (Fri–Thu) cadence over the last {data.length} weeks
           </CardDescription>
         </div>
         <span className="text-xs font-mono text-muted-foreground">
@@ -52,8 +61,12 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
       </CardHeader>
 
       <CardContent className="pt-2">
-        <div className="h-52 w-full">
-          <ResponsiveContainer width="100%" height="100%">
+        <div
+          ref={scrollRef}
+          className="h-52 w-full overflow-x-auto overscroll-x-contain"
+        >
+          <div className="h-full" style={{ minWidth: `${minWidth}px` }}>
+            <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: -25, bottom: 0 }}
@@ -71,6 +84,8 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
                 fontSize={11}
                 tickLine={false}
                 axisLine={false}
+                interval="preserveStart"
+                minTickGap={32}
               />
               <YAxis
                 stroke="hsl(var(--muted-foreground))"
@@ -89,7 +104,8 @@ export function WeeklyTrendChart({ data }: WeeklyTrendChartProps) {
                 fill="url(#appPaceGradient)"
               />
             </AreaChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         </div>
       </CardContent>
     </Card>

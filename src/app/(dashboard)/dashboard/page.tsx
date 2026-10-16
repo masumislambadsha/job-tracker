@@ -8,7 +8,7 @@ import { FollowUpAlerts } from "@/components/dashboard/FollowUpAlerts";
 import { PortalLeaderboard } from "@/components/dashboard/PortalLeaderboard";
 import { calculatePercentage } from "@/lib/utils";
 import { RESPONSE_STATUSES } from "@/lib/constants";
-import { subWeeks, startOfWeek, endOfWeek, isWithinInterval, format } from "date-fns";
+import { subWeeks, startOfWeek, endOfWeek, isWithinInterval, format, differenceInCalendarWeeks } from "date-fns";
 import { DashboardSummary } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -87,7 +87,25 @@ async function getDashboardData(userId: string): Promise<DashboardSummary> {
   );
 
   const weeklyTrend: { week: string; range?: string; count: number }[] = [];
-  for (let i = 7; i >= 0; i--) {
+  let weekCount = 8;
+  if (applications.length > 0) {
+    const earliest = applications.reduce<Date>((min, a) => {
+      const d = new Date(a.dateApplied);
+      return d < min ? d : min;
+    }, new Date(applications[0].dateApplied));
+    const firstWeekStart = startOfWeek(earliest, { weekStartsOn: 5 });
+    const currentWeekStart = startOfWeek(now, { weekStartsOn: 5 });
+    weekCount = Math.max(
+      8,
+      Math.min(
+        differenceInCalendarWeeks(currentWeekStart, firstWeekStart, {
+          weekStartsOn: 5,
+        }) + 1,
+        520
+      )
+    );
+  }
+  for (let i = weekCount - 1; i >= 0; i--) {
     const targetDate = subWeeks(now, i);
     const weekStart = startOfWeek(targetDate, { weekStartsOn: 5 });
     const weekEnd = endOfWeek(targetDate, { weekStartsOn: 5 });

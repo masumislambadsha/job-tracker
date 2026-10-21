@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "jobdesk": {
+      "type": "http",
+      "url": "https://tracker.masumislambadsha.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${JOBDESK_MCP_TOKEN}"
+      }
+    }
+  }
+}

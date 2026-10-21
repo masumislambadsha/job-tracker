@@ -1,9 +1,11 @@
 {
   "mcpServers": {
     "jobdesk": {
-      "type": "stdio",
-      "command": "node",
-      "args": ["mcp-server/index.mjs"]
+      "type": "http",
+      "url": "https://tracker.masumislambadsha.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer ${JOBDESK_MCP_TOKEN}"
+      }
     }
   }
 }
